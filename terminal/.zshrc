@@ -9,7 +9,7 @@ fi
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 
-plugins=(git)
+plugins=(docker git)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -40,7 +40,8 @@ alias tks="tmux kill-server"
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 # for asdf
-. /opt/homebrew/opt/asdf/libexec/asdf.sh
+ASDF_PATH=`brew --prefix asdf`
+. "$ASDF_PATH/libexec/asdf.sh"
 
 # for tmuxp
 export DISABLE_AUTO_TITLE='true'
@@ -50,9 +51,6 @@ export GPG_TTY=$(tty)
 
 # for mosh
 export LANG=en_US.UTF-8 LC_CTYPE=en_US.UTF-8
-
-# for kubectl
-source <(kubectl completion zsh)
 
 # for direnv
 eval "$(direnv hook zsh)"
