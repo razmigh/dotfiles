@@ -54,8 +54,9 @@ install_dev_env() {
     echo -e "\nSetup tmux"
     _setup_tmux
 
+    FZF_PATH=`brew --prefix fzf`
     echo -e "\nSetting up brew packages..."
-    echo "Set up fzf" && /opt/homebrew/opt/fzf/install
+    echo "Set up fzf" && "$FZF_PATH/install"
 
     # echo -e "\nDownload and launch docker installer"
     # https://docs.docker.com/desktop/install/mac-install/
