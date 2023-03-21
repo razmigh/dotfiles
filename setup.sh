@@ -33,8 +33,6 @@ install_dev_env() {
   ARCH=$(uname -m)
   echo 'spot' 'OS:' "$OS $KERNEL ($ARCH)"
 
-  case "$OS" in
-  Darwin)
     echo -e '\nChecking Homebrew...'
     if ! [[ -x "$(command -v brew)" ]]; then
       echo '[pkg] Homebrew is missing'
@@ -63,9 +61,8 @@ install_dev_env() {
     # https://docs.docker.com/desktop/install/mac-install/
     echo -e "\nOpen docker download page..."
     open https://www.docker.com/
-    ;;
-  *) echo "system package installation isn't supported with your OS/Distro." ;;
-  esac
+    
+  
 
   readonly OS
   readonly KERNEL
