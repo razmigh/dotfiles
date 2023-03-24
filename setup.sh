@@ -82,6 +82,9 @@ _setup_nvim() {
 
   echo "run PackerSync"
   nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+
+  echo "install prettierd for vim formatting"
+  brew install fsouza/prettierd/prettierd
 }
 
 _setup_tmux() {
