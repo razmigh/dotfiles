@@ -102,14 +102,17 @@ _setup_git() {
 }
 
 install_elixir_env() {
-  ERLANG_VERSION=24.3.4.8
-  ELIXIR_VERSION=1.14.3-otp-24
+  ERLANG_VERSION=25.3
+  ELIXIR_VERSION=1.14.4-otp-25
   NODEJS_VERSION=18.7.0
 
   echo -e "\nInstall asdf packages..."
-  asdf plugin add erlang && asdf install erlang $ERLANG_VERSION
-  asdf plugin add elixir && asdf install elixir $ELIXIR_VERSION
-  asdf plugin add nodejs && asdf install nodejs $NODEJS_VERSION
+  asdf plugin add erlang
+  asdf install erlang $ERLANG_VERSION
+  asdf plugin add elixir 
+  asdf install elixir $ELIXIR_VERSION
+  asdf plugin add nodejs
+  asdf install nodejs $NODEJS_VERSION
 
   asdf global erlang $ERLANG_VERSION
   asdf global elixir $ELIXIR_VERSION
