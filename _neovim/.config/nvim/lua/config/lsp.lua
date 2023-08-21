@@ -51,9 +51,10 @@ cmp.setup {
 
 local config = {
     on_attach = on_attach,
-    settings = {elixirLS = {dialyzerEnabled = false}},
+    settings = {elixirLS = {dialyzerEnabled = false}, fetchDeps = false},
     cmd = {"elixir-ls"},
-    capabilities = capabilities
+    capabilities = capabilities,
+    fetchDeps = false
 }
 
 lspconfig.elixirls.setup(config)
