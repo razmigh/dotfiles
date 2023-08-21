@@ -43,10 +43,13 @@ install_dev_env() {
 
     echo -e "\nInstall brew packages..."
     # fd lazygit lazydocker
-    local cli_packages=(asdf direnv fzf mosh ripgrep)
+    local cli_packages=(asdf direnv fzf mosh ripgrep python)
     for pkg in "${cli_packages[@]}"; do
       brew install "$pkg"
     done
+
+    echo "install pip"
+    python3 -m ensurepip
 
     echo -e "\nSetup nvim"
     _setup_nvim
@@ -85,6 +88,9 @@ _setup_nvim() {
 
   echo "install prettierd for vim formatting"
   brew install fsouza/prettierd/prettierd
+
+  echo "install autopep for python formatting"
+  pip install --upgrade autopep8
 }
 
 _setup_tmux() {
@@ -108,7 +114,7 @@ install_elixir_env() {
 
   echo -e "\nInstall asdf packages..."
   asdf plugin add erlang
-  asdf install erlang $ERLANG_VERSION
+  KERL_BUILD_DOCS=yes asdf install erlang $ERLANG_VERSION
   asdf plugin add elixir 
   asdf install elixir $ELIXIR_VERSION
   asdf plugin add nodejs
@@ -118,8 +124,20 @@ install_elixir_env() {
   asdf global elixir $ELIXIR_VERSION
   asdf global nodejs $NODEJS_VERSION
 
+  #local ls_path="$HOME/.local/share/language-servers"
+  #local elixirls_path="${ls_path}/elixir-ls"
+  #local bin_path="${elixirls_path}/release"
+  #rm -rf $elixirls_path && mkdir -pv $elixirls_path
+  #git clone https://github.com/elixir-lsp/elixir-ls.git $elixirls_path
+  #cd $elixirls_path
+  #mix deps.get && mix compile && mix elixir_ls.release -o release
+  #chmod +x "${bin_path}/language_server.sh"
+  #sudo ln -fsv "${bin_path}/language_server.sh" "/usr/local/bin/elixir-ls" &&
+  #  echo 'elixir-ls installed!'
+
   local ls_path="$HOME/.local/share/language-servers"
-  mkdir -pv $ls_path
+  local elixirls_path="${ls_path}/elixir-ls"
+  rm -rf $elixirls_path && mkdir -pv $elixirls_path
   cd $ls_path && (
     curl -fLO https://github.com/elixir-lsp/elixir-ls/releases/latest/download/elixir-ls.zip
     unzip -o elixir-ls.zip -d ./elixir-ls
