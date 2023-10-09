@@ -2,6 +2,7 @@
 
 DOTFILES=~/.dotfiles
 LANGUAGE_SERVERS=~/.language_servers
+TMP=~/.raztmp
 
 symlink() {
   rm -rf $2
@@ -215,6 +216,27 @@ setup_all_files() {
   _setup_zsh_files
   _setup_dev_files
   _setup_nvim_files
+}
+
+# untested
+# https://gist.github.com/kuntau/37698a5159ceac40982b1f7ae96b7db8#file-mosh-md
+install_mosh() {
+
+  # sudo apt install perl protobuf-compiler libprotobuf-dev \
+  # libncurses5-dev zlib1g-dev libutempter-dev libssl-dev
+  brew install pkg-config
+
+  mkdir -pv $TMP
+  cd $TMP && git clone --depth=1 https://github.com/mobile-shell/mosh.git &&\
+  cd mosh && ./autogen.sh && ./configure && make && sudo make install && cd -
+
+
+  # if you get protobuf issues
+  # sudo find / -name "libprotobuf.so*"
+  # make sure theres only 1 install and u rebuild with it
+
+  # if mosh cant find it (shared module blabla), make sure it exists here
+  # /usr/lib/x86_64-linux-gnu/libprotobuf.so.24.4.0
 }
 
 main() {
