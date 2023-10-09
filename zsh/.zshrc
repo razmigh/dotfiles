@@ -24,13 +24,6 @@ alias dcd="docker compose down"
 alias ips="iex -S mix phx.server"
 alias ers="mix ecto.reset && mix ecto.seed"
 
-alias apachestart="sudo service apache2 start"
-alias apachestop="sudo service apache2 stop"
-alias apacherestart="sudo service apache2 restart"
-alias mysqlstart="brew services start mysql"
-alias mysqlstop="brew services stop mysql"
-alias mysqlrestart="brew services restart mysql"
-
 alias tks="tmux kill-server"
 
 # for fzf
