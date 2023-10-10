@@ -79,6 +79,9 @@ install_nvim() {
   echo "-Run PackerSync-"
   nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
 
+  echo "-Run TSUpdate-"
+  nvim --headless -c 'TSUpdate' -c q
+
   echo "-Install prettierd for vim formatting-"
   brew install fsouza/prettierd/prettierd
 
