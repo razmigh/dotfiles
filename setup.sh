@@ -142,7 +142,7 @@ install_elixir() {
 
   local elixirls_path="${LANGUAGE_SERVERS}/elixir-ls"
   rm -rf $elixirls_path && mkdir -pv $elixirls_path
-  cd $ls_path && (
+  cd $LANGUAGE_SERVERS && (
     curl -fLO https://github.com/elixir-lsp/elixir-ls/releases/download/v0.16.0/elixir-ls-v0.16.0.zip
     unzip -o elixir-ls-v0.16.0.zip -d ./elixir-ls
     cd -
