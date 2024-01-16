@@ -29,6 +29,7 @@ nnoremap <silent> <Leader>, :Telescope buffers<CR>
 nnoremap <silent> <Leader>/ :Telescope live_grep<CR>
 nnoremap <silent> <Leader>q :bdelete<CR>
 nnoremap <silent> <Leader>Q :bdelete!<CR>
+nnoremap <silent> <Leader>- :ClangdSwitchSourceHeader<CR>
 
 " Clear highlighted search
 nmap <silent> <C-\> :nohlsearch<CR>
@@ -54,3 +55,5 @@ endfunction
 
 " Automatically source vimrc on save.
 autocmd! BufWritePost $MYVIMRC source $MYVIMRC | echom "Sourced " . $MYVIMRC
+
+autocmd! FileType cpp setlocal shiftwidth=3 tabstop=3 softtabstop=3
