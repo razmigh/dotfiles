@@ -249,10 +249,19 @@ install_gpg_key() {
   gpg --armor --export "$id"
 }
 
+install_cpp() {
+  _setup_cpp_files
+}
+
+_setup_cpp_files() {
+  symlink $DOTFILES/cpp/config.yaml $HOME/.config/clangd/config.yaml
+}
+
 setup_all_files() {
   _setup_zsh_files
   _setup_dev_files
   _setup_nvim_files
+  _setup_cpp_files
 }
 
 main() {
@@ -260,43 +269,42 @@ main() {
 
   clear
   local options=()
-  options[0]='Install zsh'
-  options[1]='Install base dev'
-  options[2]='Install neovim'
-  options[3]='Install python'
-  options[4]='Install node'
-  options[5]='Install elixir'
-  options[6]='Install SSH key'
-  options[7]='Install GPG key'
-  options[8]='Setup all files'
-  #options[1]='Install Development env'
-  #options[2]='Install Elixir env'
-  #options[3]='Install LAMP env'
-  #options[4]='Setup SSH key'
-  #options[5]='Setup GPG key'
-  #options[6]='Place dev config files'
-  #options[7]='Place git config files'
-
+  options+=('zsh:       Install zsh')
+  options+=('dev:       Install base dev')
+  options+=('nvim:      Install neovim')
+  options+=('')
+  options+=('ssh:       Install SSH key')
+  options+=('gpg:       Install GPG key')
+  options+=('setupall:  Setup all files')
+  options+=('')
+  options+=('py:        Install python')
+  options+=('npm:       Install node')
+  options+=('ex:        Install elixir')
+  options+=('cpp:       Install C++')
+  
   echo 'Select one of the following options:'
   for i in "${!options[@]}"; do
-    echo "$(($i + 1))" "${options[$i]}"
+    echo "${options[$i]}"
   done
   echo "q) Quit"
 
   echo -e "\nSelect an option (*): "
   read -r response
   case "$response" in
-  1) install_zsh ;;
-  2) install_dev ;;
-  3) install_nvim ;;
-  4) install_python ;;
-  5) install_nodejs ;;
-  6) install_elixir ;;
-  7) install_ssh_key ;;
-  8) install_gpg_key ;;
-  9) setup_all_files ;;
-  [Qq]) exit 0 ;;
-  *) echo "'${response}' isn't a valid option" ;;
+    zsh) install_zsh ;;
+    dev) install_dev ;;
+    nvim) install_nvim ;;
+
+    ssh) install_ssh_key ;;
+    gpg) install_gpg_key ;;
+    setupall) setup_all_files ;;
+
+    py) install_python ;;
+    npm) install_nodejs ;;
+    ex) install_elixir ;;
+    cpp) install_cpp ;;
+    [Qq]) exit 0 ;;
+    *) echo "'${response}' isn't a valid option" ;;
   esac
 
   readonly OS
