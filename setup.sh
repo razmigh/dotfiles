@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 
-DOTFILES=~/.dotfiles
-LANGUAGE_SERVERS=~/.language_servers
-TMP=~/.raztmp
+OS=$(uname -s)
+KERNEL=$(uname -r)
+ARCH=$(uname -m)
+
+OS_LINUX="Linux"
+OS_MAC="Darwin"
+
+DOTFILES=$(pwd)
+
+INSTALLS=~/.local/install
+LANGUAGE_SERVERS=$INSTALLS/language_servers
+LIBS=$INSTALLS/libs
+TMP=$INSTALLS/.raztmp
+
+FONTS_FOLDER=~/.local/share/fonts
 
 symlink() {
   rm -rf $2
@@ -21,14 +33,19 @@ install_zsh() {
   echo '--Set up ZSH--'
 
   echo '-Install and set zsh as default shell-'
-  brew install zsh &&
-    chsh -s /usr/local/bin/zsh
+  if [ "$OS" = "$OS_MAC" ]; then
+    brew install zsh &&
+      chsh -s /usr/local/bin/zsh
+  fi
+  if [ "$OS" = "$OS_LINUX" ]; then
+    echo 'SKIP ZSH install, install yourself'
+  fi
 
   echo '-Install oh-my-zsh-'
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
   echo '-Download fonts for powerlevel10k-'
-  cd ~/Library/Fonts && {
+  cd $FONTS_FOLDER && {
     curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf'
     curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf'
     curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf'
@@ -42,20 +59,31 @@ install_zsh() {
   _setup_zsh_files
 }
 
+_setup_zsh_files () {
+  symlink $DOTFILES/zsh/.p10k.zsh $HOME/.p10k.zsh
+  symlink $DOTFILES/zsh/.zshrc $HOME/.zshrc
+}
+
 install_dev() {
-  echo -e '\nChecking Homebrew...'
-  if ! [[ -x "$(command -v brew)" ]]; then
-    echo '[pkg] Homebrew is missing'
-    echo 'Installing Homebrew...'
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" &&
-      echo 'Homebrew ready!'
+  if [ "$OS" = "$OS_MAC" ]; then
+    echo -e '\nChecking Homebrew...'
+    if ! [[ -x "$(command -v brew)" ]]; then
+      echo '[pkg] Homebrew is missing'
+      echo 'Installing Homebrew...'
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" &&
+        echo 'Homebrew ready!'
+    fi
+
+    echo "-Install Packages-"
+    install_brew_packages asdf direnv mosh tmux tmuxp
+  fi
+  if [ "$OS" = "$OS_LINUX" ]; then
+    echo "SKIP dev packages, install yourself (asdf direnv mosh tmux tmuxp)"
   fi
 
-  echo "-Install Packages-"
-  install_brew_packages asdf direnv fzf mosh tmux tmuxp
-
-  FZF_PATH=`brew --prefix fzf`
-  echo "Set up fzf" && "$FZF_PATH/install"
+  echo "-Install fzf-"
+  git clone --depth 1 https://github.com/junegunn/fzf.git $LIBS/fzf
+  $LIBS/fzf/install
 
   # echo -e "\nDownload and launch docker installer"
   # https://docs.docker.com/desktop/install/mac-install/
@@ -65,9 +93,37 @@ install_dev() {
   _setup_dev_files
 }
 
+_setup_dev_files() {
+  local gitconfig=$DOTFILES/dev_files/.gitconfig.local
+
+  if ! [ -f $gitconfig ]; then
+    echo "Enter your full name for git"
+    read -r name
+    echo "Enter your email for git"
+    read -r email
+    echo "Enter your username for git"
+    read -r username
+
+    cp $DOTFILES/dev_files/.gitconfig $gitconfig
+
+    cat $gitconfig |
+      sed "s/raz@boblet.com/$email/" |
+      sed "s/Raz Boblet/$name/" |
+      sed "s/razboblet/$username/" | tee $gitconfig
+  fi
+  
+  symlink $DOTFILES/dev_files/.tmux.conf $HOME/.tmux.conf
+  symlink $gitconfig $HOME/.gitconfig
+}
+
 install_nvim() {
   echo "--Install Neovim--"
-  brew install neovim
+  if [ "$OS" = "$OS_MAC" ]; then
+    brew install neovim
+  fi
+  if [ "$OS" = "$OS_LINUX" ]; then
+    echo "SKIP neovim install, install yourself"
+  fi
 
   _setup_nvim_files
 
@@ -82,14 +138,24 @@ install_nvim() {
   echo "-Run TSUpdate-"
   nvim --headless -c 'TSUpdate' -c q
 
-  echo "-Install prettierd for vim formatting-"
-  brew install fsouza/prettierd/prettierd
+  echo -e "\n-Install prettierd for vim formatting-"
+  npm install -g @fsouza/prettierd
+  #brew install fsouza/prettierd/prettierd
 
   echo "-Install Packages-"
-  install_brew_packages ripgrep
+  if [ "$OS" = "$OS_MAC" ]; then
+    install_brew_packages ripgrep
+  fi
+  if [ "$OS" = "$OS_LINUX" ]; then
+    echo "SKIP nvim package install, install yourself (ripgrep)"
+  fi
 }
 
-#untested
+_setup_nvim_files() {
+  symlink $DOTFILES/nvim/init.vim $HOME/.config/nvim/init.vim
+  symlink $DOTFILES/nvim/lua $HOME/.config/nvim/lua
+}
+
 install_python() {
   PYTHON_VERSION=3.12.0
   asdf plugin add python
@@ -166,7 +232,12 @@ install_ssh_key() {
 install_gpg_key() {
   echo "Setting up GPG key"
   echo "Install gpg tooling"
-  install_brew_packages gnupg
+  if [ "$OS" = "$OS_MAC" ]; then
+    install_brew_packages gnupg
+  fi
+  if [ "$OS" = "$OS_LINUX" ]; then
+    echo "SKIP gpg lib install, install yourself (gnupg)"
+  fi
 
   echo "Generate key. (default-RSA & RSA, 4096, default-0)"
   gpg --full-generate-key
@@ -178,75 +249,14 @@ install_gpg_key() {
   gpg --armor --export "$id"
 }
 
-_setup_zsh_files () {
-  cp -Rv ./zsh $DOTFILES
-
-  symlink $DOTFILES/zsh/.p10k.zsh $HOME/.p10k.zsh
-  symlink $DOTFILES/zsh/.zshrc $HOME/.zshrc
-}
-
-_setup_dev_files() {
-  cp -Rv ./dev_files $DOTFILES
-
-  echo "Enter your full name for git"
-  read -r name
-  echo "Enter your email for git"
-  read -r email
-  echo "Enter your username for git"
-  read -r username
-
-  local gitconfig=$DOTFILES/dev_files/.gitconfig
-
-  cat $gitconfig |
-    sed "s/raz@boblet.com/$email/" |
-    sed "s/Raz Boblet/$name/" |
-    sed "s/razboblet/$username/" | tee $gitconfig
-
-  symlink $DOTFILES/dev_files/.tmux.conf $HOME/.tmux.conf
-  symlink $DOTFILES/dev_files/.gitconfig $HOME/.gitconfig
-}
-
-_setup_nvim_files() {
-  cp -Rv ./nvim $DOTFILES
-
-  symlink $DOTFILES/nvim/init.vim $HOME/.config/nvim/init.vim
-  symlink $DOTFILES/nvim/lua $HOME/.config/nvim/lua
-}
-
 setup_all_files() {
-  mkdir -pv $DOTFILES
-
   _setup_zsh_files
   _setup_dev_files
   _setup_nvim_files
 }
 
-# untested
-# https://gist.github.com/kuntau/37698a5159ceac40982b1f7ae96b7db8#file-mosh-md
-install_mosh() {
-
-  # sudo apt install perl protobuf-compiler libprotobuf-dev \
-  # libncurses5-dev zlib1g-dev libutempter-dev libssl-dev
-  brew install pkg-config
-
-  mkdir -pv $TMP
-  cd $TMP && git clone --depth=1 https://github.com/mobile-shell/mosh.git &&\
-  cd mosh && ./autogen.sh && ./configure && make && sudo make install && cd -
-
-
-  # if you get protobuf issues
-  # sudo find / -name "libprotobuf.so*"
-  # make sure theres only 1 install and u rebuild with it
-
-  # if mosh cant find it (shared module blabla), make sure it exists here
-  # /usr/lib/x86_64-linux-gnu/libprotobuf.so.24.4.0
-}
-
 main() {
-  OS=$(uname -s)
-  KERNEL=$(uname -r)
-  ARCH=$(uname -m)
-  echo 'spot' 'OS:' "$OS $KERNEL ($ARCH)"
+  echo 'OS:' "$OS $KERNEL ($ARCH)"
 
   clear
   local options=()
