@@ -15,7 +15,6 @@ inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<CR>"
 lua require('plugins')
 
 " Color scheme
-
 set notermguicolors
 
 packadd! nvim-base16
@@ -55,4 +54,3 @@ endfunction
 
 " Automatically source vimrc on save.
 autocmd! BufWritePost $MYVIMRC source $MYVIMRC | echom "Sourced " . $MYVIMRC
-
