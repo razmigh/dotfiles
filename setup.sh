@@ -60,8 +60,13 @@ install_zsh() {
 }
 
 _setup_zsh_files () {
+  local zshrc=$DOTFILES/zsh/.zshrc.local
+  if ! [ -f $zshrc ]; then
+     echo -e "source $DOTFILES/zsh/.zshrc\r\n" >> $zshrc
+  fi
+
   symlink $DOTFILES/zsh/.p10k.zsh $HOME/.p10k.zsh
-  symlink $DOTFILES/zsh/.zshrc $HOME/.zshrc
+  symlink $zshrc $HOME/.zshrc
 }
 
 install_dev() {
