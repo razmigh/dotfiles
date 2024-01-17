@@ -13,6 +13,12 @@ return require('packer').startup(function()
     use 'L3MON4D3/LuaSnip' -- Snippets plugin
 
     use {
+        "nvimtools/none-ls.nvim",
+        config = [[require('config.none_ls')]],
+        requires = {"nvim-lua/plenary.nvim"}
+    }
+
+    use {
         'nvim-treesitter/nvim-treesitter',
         event = "BufEnter",
         run = ':TSUpdate',

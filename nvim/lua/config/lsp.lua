@@ -10,8 +10,7 @@ local on_attach = function()
     vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
     vim.keymap.set('n', '<Leader>D', vim.lsp.buf.type_definition, opts)
     vim.keymap.set("n", "<Leader>v", vim.lsp.buf.code_action, opts)
-    vim.keymap.set('n', '<Leader>f',
-                   function() vim.lsp.buf.format {async = true} end, opts)
+    vim.keymap.set('n', '<Leader>f', vim.lsp.buf.format {filter = function(client) return client.name ~= "tsserver" end, async = true}, opts)
     vim.keymap.set("n", "<Leader>O", vim.diagnostic.open_float, opts)
 
     require("vim.lsp.protocol").CompletionItemKind = {
@@ -90,8 +89,14 @@ lspconfig.eslint.setup({
   settings = {}
 })
 
-require'lspconfig'.tsserver.setup({ on_attach = on_attach })
+-- lspconfig.tsserver.setup({ on_attach = on_attach })
 
-require'lspconfig'.volar.setup{
+lspconfig.volar.setup{
+  init_options = {
+    typescript = {
+      tsdk = vim.env.HOME .. '/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib'
+      -- tsdk = vim.fn.expand('$HOME/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib')
+    }
+  },
   filetypes = {'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue', 'json'}
 }

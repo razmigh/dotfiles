@@ -84,7 +84,11 @@ install_dev() {
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
     echo "SKIP dev packages, install yourself (asdf direnv mosh tmux tmuxp)"
+    exit 0
   fi
+
+  asdf plugin-add direnv
+  asdf global direnv 2.33.0
 
   echo "-Install fzf-"
   git clone --depth 1 https://github.com/junegunn/fzf.git $LIBS/fzf
@@ -274,11 +278,29 @@ _setup_cpp_files() {
   symlink $DOTFILES/cpp/config.yaml $HOME/.config/clangd/config.yaml
 }
 
+install_lua() {
+  local lua_fmt=$LIBS/LuaFormatter
+  git clone --recurse-submodules https://github.com/Koihik/LuaFormatter.git $lua_fmt
+  cd $lua_fmt && {
+    cmake .
+    make
+    make install
+    cd -
+  }
+
+  _setup_lua_files
+}
+
+_setup_lua_files() {
+  symlink $LIBS/LuaFormatter/lua-format $HOME/.local/bin/lua-format
+}
+
 setup_all_files() {
   _setup_zsh_files
   _setup_dev_files
   _setup_nvim_files
   _setup_cpp_files
+  _setup_lua_files
 }
 
 main() {
@@ -298,6 +320,7 @@ main() {
   options+=('js:        Install js/node')
   options+=('ex:        Install elixir')
   options+=('cpp:       Install C++')
+  options+=('lua:       Install lua')
   
   echo 'Select one of the following options:'
   for i in "${!options[@]}"; do
@@ -320,6 +343,8 @@ main() {
     js) install_js ;;
     ex) install_elixir ;;
     cpp) install_cpp ;;
+    lua) install_lua ;;
+    temp) _setup_lua_files ;;
     [Qq]) exit 0 ;;
     *) echo "'${response}' isn't a valid option" ;;
   esac
