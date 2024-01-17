@@ -162,16 +162,18 @@ _setup_nvim_files() {
 }
 
 install_python() {
-  PYTHON_VERSION=3.12.0
+  PYTHON_VERSION=3.9.16
   asdf plugin add python
-  asdf install python $PYTHON_VERSION
+  #asdf install python $PYTHON_VERSION
   asdf global python $PYTHON_VERSION
 
   echo "-Install pip-"
   python3 -m ensurepip
 
-  echo "-Install autopep for python formatting-"
-  pip install --upgrade autopep8
+  #pip install python-lsp-server
+  pip install python-lsp-server[pylint]
+  #echo "-Install autopep for python formatting-"
+  #pip install --upgrade autopep8
 }
 
 install_nodejs() {
