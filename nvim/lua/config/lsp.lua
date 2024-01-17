@@ -69,3 +69,18 @@ lspconfig.elixirls.setup(config)
 -- cpp
 lspconfig.clangd.setup({ on_attach = on_attach })
 
+-- py
+-- if not working, try running pylsp, if error: no preset version, uninstall and reinstall with current py version
+lspconfig.pylsp.setup({
+  on_attach = on_attach,
+  settings = {
+    pylsp = {
+      plugins = {
+        pylint = { 
+          enabled = true,
+          args = {'--disable=R,C,E0401'}
+        },
+      }
+    }
+  }
+})

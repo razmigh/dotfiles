@@ -6,16 +6,11 @@ return require('packer').startup(function()
 
     use {"neovim/nvim-lspconfig", config = [[require('config.lsp')]]}
 
+    use {"rhysd/git-messenger.vim"} -- git browser
     use 'hrsh7th/nvim-cmp' -- Autocompletion plugin
     use 'hrsh7th/cmp-nvim-lsp' -- LSP source for nvim-cmp
     use 'saadparwaiz1/cmp_luasnip' -- Snippets source for nvim-cmp
     use 'L3MON4D3/LuaSnip' -- Snippets plugin
-
-    use {
-        "jose-elias-alvarez/null-ls.nvim",
-        config = [[require('config.null_ls')]],
-        requires = {"nvim-lua/plenary.nvim"}
-    }
 
     use {
         'nvim-treesitter/nvim-treesitter',
