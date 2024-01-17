@@ -57,14 +57,13 @@ cmp.setup {
 }
 
 -- elixir
-local config = {
-    on_attach = on_attach,
-    settings = {elixirLS = {dialyzerEnabled = false}, fetchDeps = false},
-    cmd = {"elixir-ls"},
-    capabilities = capabilities,
-    fetchDeps = false
-}
-lspconfig.elixirls.setup(config)
+lspconfig.elixirls.setup({
+  on_attach = on_attach,
+  settings = {elixirLS = {dialyzerEnabled = false}, fetchDeps = false},
+  cmd = {"elixir-ls"},
+  capabilities = capabilities,
+  fetchDeps = false
+})
 
 -- cpp
 lspconfig.clangd.setup({ on_attach = on_attach })
@@ -84,3 +83,15 @@ lspconfig.pylsp.setup({
     }
   }
 })
+
+--js
+lspconfig.eslint.setup({
+  on_attach = on_attach,
+  settings = {}
+})
+
+require'lspconfig'.tsserver.setup({ on_attach = on_attach })
+
+require'lspconfig'.volar.setup{
+  filetypes = {'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue', 'json'}
+}

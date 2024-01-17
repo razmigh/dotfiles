@@ -143,10 +143,6 @@ install_nvim() {
   echo "-Run TSUpdate-"
   nvim --headless -c 'TSUpdate' -c q
 
-  echo -e "\n-Install prettierd for vim formatting-"
-  npm install -g @fsouza/prettierd
-  #brew install fsouza/prettierd/prettierd
-
   echo "-Install Packages-"
   if [ "$OS" = "$OS_MAC" ]; then
     install_brew_packages ripgrep
@@ -176,11 +172,25 @@ install_python() {
   #pip install --upgrade autopep8
 }
 
-install_nodejs() {
+install_js() {
+  echo "--Install JS & Node--"
   NODEJS_VERSION=18.7.0
   asdf plugin add nodejs
   asdf install nodejs $NODEJS_VERSION
   asdf global nodejs $NODEJS_VERSION
+
+  echo -e "-Install vscode-langservers for eslint-"
+  npm i -g vscode-langservers-extracted
+
+  echo -e "\n-Install prettierd for vim formatting-"
+  npm install -g @fsouza/prettierd
+  #brew install fsouza/prettierd/prettierd
+  
+  echo -e "-Install tsserver for js lsp-"
+  npm install -g typescript typescript-language-server
+
+  echo -e "-Install volar-"
+  npm install -g @vue/language-server
 }
 
 install_elixir() {
@@ -285,7 +295,7 @@ main() {
   options+=('setupall:  Setup all files')
   options+=('')
   options+=('py:        Install python')
-  options+=('npm:       Install node')
+  options+=('js:        Install js/node')
   options+=('ex:        Install elixir')
   options+=('cpp:       Install C++')
   
@@ -307,7 +317,7 @@ main() {
     setupall) setup_all_files ;;
 
     py) install_python ;;
-    npm) install_nodejs ;;
+    js) install_js ;;
     ex) install_elixir ;;
     cpp) install_cpp ;;
     [Qq]) exit 0 ;;
