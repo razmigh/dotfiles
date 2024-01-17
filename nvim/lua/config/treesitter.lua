@@ -3,7 +3,7 @@ require("nvim-treesitter.configs").setup({
         "bash", "c", "cpp", "css", "dockerfile", "eex", "elixir", "erlang",
         "graphql", "heex", "html", "javascript", "json", "latex", "lua", "make",
         "python", "regex", "scss", "surface", "svelte", "toml", "typescript", "vim",
-        "zig", "yaml"
+        "vue", "zig", "yaml"
     },
     ignore_install = {}, -- List of parsers to ignore installing
     highlight = {
