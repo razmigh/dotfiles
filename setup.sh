@@ -82,13 +82,17 @@ install_dev() {
     fi
 
     echo "-Install Packages-"
-    install_brew_packages asdf direnv mosh tmux tmuxp tree
+    install_brew_packages direnv mosh tmux tmuxp tree
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
-    echo "SKIP dev packages, install yourself (asdf direnv mosh tmux tmuxp tree)"
+    echo "SKIP dev packages, install yourself (direnv mosh tmux tmuxp tree)"
     exit 0
   fi
 
+  echo "-Install asdf-"
+  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
+
+  echo "-Install asdf direnv-"
   asdf plugin-add direnv
   asdf global direnv 2.33.0
 
