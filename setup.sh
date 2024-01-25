@@ -235,7 +235,7 @@ install_elixir() {
     curl -fLO https://github.com/elixir-lsp/elixir-ls/releases/download/v0.16.0/elixir-ls-v0.16.0.zip
     unzip -o elixir-ls-v0.16.0.zip -d ./elixir-ls
     cd -
-  ) && sudo ln -fsv "${elixirls_path}/language_server.sh" "/usr/local/bin/elixir-ls" &&
+  ) && sudo ln -fsv "${elixirls_path}/language_server.sh" "$HOME/.local/bin/elixir-ls" &&
     echo 'elixir-ls installed!'
 }
 
@@ -277,6 +277,7 @@ install_cpp() {
 }
 
 _setup_cpp_files() {
+  mkdir -pv $HOME/.config/clangd
   symlink $DOTFILES/cpp/config.yaml $HOME/.config/clangd/config.yaml
 }
 
@@ -294,6 +295,7 @@ install_lua() {
 }
 
 _setup_lua_files() {
+  mkdir -pv $HOME/.local/bin
   symlink $LIBS/LuaFormatter/lua-format $HOME/.local/bin/lua-format
 }
 
