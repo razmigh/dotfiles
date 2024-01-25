@@ -25,7 +25,7 @@ install_brew_packages() {
   local pkgs=("$@")
 
   for pkg in "${pkgs[@]}"; do
-    brew install "$pkg"
+    brew reinstall "$pkg"
   done
 }
 
@@ -34,7 +34,7 @@ install_zsh() {
 
   echo '-Install and set zsh as default shell-'
   if [ "$OS" = "$OS_MAC" ]; then
-    brew install zsh &&
+    brew reinstall zsh &&
       chsh -s /usr/local/bin/zsh
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
@@ -128,7 +128,7 @@ _setup_dev_files() {
 install_nvim() {
   echo "--Install Neovim--"
   if [ "$OS" = "$OS_MAC" ]; then
-    brew install neovim
+    brew reinstall neovim
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
     echo "SKIP neovim install, install yourself"
@@ -188,7 +188,7 @@ install_js() {
 
   echo -e "\n-Install prettierd for vim formatting-"
   npm install -g @fsouza/prettierd
-  #brew install fsouza/prettierd/prettierd
+  #brew reinstall fsouza/prettierd/prettierd
   
   echo -e "-Install tsserver for js lsp-"
   npm install -g typescript typescript-language-server
@@ -293,6 +293,27 @@ install_lua() {
 
 _setup_lua_files() {
   symlink $LIBS/LuaFormatter/lua-format $HOME/.local/bin/lua-format
+}
+
+# untested
+# https://gist.github.com/kuntau/37698a5159ceac40982b1f7ae96b7db8#file-mosh-md
+install_mosh() {
+
+  # sudo apt install perl protobuf-compiler libprotobuf-dev \
+  # libncurses5-dev zlib1g-dev libutempter-dev libssl-dev
+  brew reinstall pkg-config
+
+  mkdir -pv $TMP
+  cd $TMP && git clone --depth=1 https://github.com/mobile-shell/mosh.git &&\
+  cd mosh && ./autogen.sh && ./configure && make && sudo make install && cd -
+
+
+  # if you get protobuf issues
+  # sudo find / -name "libprotobuf.so*"
+  # make sure theres only 1 install and u rebuild with it
+
+  # if mosh cant find it (shared module blabla), make sure it exists here
+  # /usr/lib/x86_64-linux-gnu/libprotobuf.so.24.4.0
 }
 
 setup_all_files() {
