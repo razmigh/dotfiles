@@ -286,6 +286,7 @@ _setup_cpp_files() {
 }
 
 install_lua() {
+  echo "-Install LuaFormatter-"
   local lua_fmt=$LIBS/LuaFormatter
   git clone --recurse-submodules https://github.com/Koihik/LuaFormatter.git $lua_fmt
   cd $lua_fmt && {
@@ -301,6 +302,11 @@ install_lua() {
 _setup_lua_files() {
   mkdir -pv $HOME/.local/bin
   symlink $LIBS/LuaFormatter/lua-format $HOME/.local/bin/lua-format
+}
+
+install_bash() {
+  echo "-Install beautysh-"
+  pip install setuptools beautysh
 }
 
 # untested
@@ -350,6 +356,7 @@ main() {
   options+=('ex:        Install elixir')
   options+=('cpp:       Install C++')
   options+=('lua:       Install lua')
+  options+=('sh:        Install bash')
   
   echo 'Select one of the following options:'
   for i in "${!options[@]}"; do
@@ -373,6 +380,7 @@ main() {
     ex) install_elixir ;;
     cpp) install_cpp ;;
     lua) install_lua ;;
+    sh) install_bash ;;
     temp) _setup_lua_files ;;
     [Qq]) exit 0 ;;
     *) echo "'${response}' isn't a valid option" ;;
