@@ -10,7 +10,10 @@ local on_attach = function()
     vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
     vim.keymap.set('n', '<Leader>D', vim.lsp.buf.type_definition, opts)
     vim.keymap.set("n", "<Leader>v", vim.lsp.buf.code_action, opts)
-    vim.keymap.set('n', '<Leader>f', vim.lsp.buf.format {filter = function(client) return client.name ~= "tsserver" end, async = true}, opts)
+    vim.keymap.set('n', '<Leader>f', vim.lsp.buf.format {
+        filter = function(client) return client.name ~= "tsserver" end,
+        async = true
+    }, opts)
     vim.keymap.set("n", "<Leader>O", vim.diagnostic.open_float, opts)
 
     require("vim.lsp.protocol").CompletionItemKind = {
@@ -57,46 +60,44 @@ cmp.setup {
 
 -- elixir
 lspconfig.elixirls.setup({
-  on_attach = on_attach,
-  settings = {elixirLS = {dialyzerEnabled = false}, fetchDeps = false},
-  cmd = {"elixir-ls"},
-  capabilities = capabilities,
-  fetchDeps = false
+    on_attach = on_attach,
+    settings = {elixirLS = {dialyzerEnabled = false}, fetchDeps = false},
+    cmd = {"elixir-ls"},
+    capabilities = capabilities,
+    fetchDeps = false
 })
 
 -- cpp
-lspconfig.clangd.setup({ on_attach = on_attach })
+lspconfig.clangd.setup({on_attach = on_attach})
 
 -- py
 -- if not working, try running pylsp, if error: no preset version, uninstall and reinstall with current py version
 lspconfig.pylsp.setup({
-  on_attach = on_attach,
-  settings = {
-    pylsp = {
-      plugins = {
-        pylint = { 
-          enabled = true,
-          args = {'--disable=R,C,E0401'}
-        },
-      }
+    on_attach = on_attach,
+    settings = {
+        pylsp = {
+            plugins = {
+                pylint = {enabled = true, args = {'--disable=R,C,E0401'}}
+            }
+        }
     }
-  }
 })
 
---js
-lspconfig.eslint.setup({
-  on_attach = on_attach,
-  settings = {}
-})
+-- js
+lspconfig.eslint.setup({on_attach = on_attach, settings = {}})
 
 -- lspconfig.tsserver.setup({ on_attach = on_attach })
 
-lspconfig.volar.setup{
-  init_options = {
-    typescript = {
-      tsdk = vim.env.HOME .. '/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib'
-      -- tsdk = vim.fn.expand('$HOME/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib')
+lspconfig.volar.setup {
+    init_options = {
+        typescript = {
+            tsdk = vim.env.HOME ..
+                '/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib'
+            -- tsdk = vim.fn.expand('$HOME/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib')
+        }
+    },
+    filetypes = {
+        'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue',
+        'json'
     }
-  },
-  filetypes = {'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue', 'json'}
 }

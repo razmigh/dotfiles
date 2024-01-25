@@ -35,7 +35,7 @@ install_zsh() {
   echo '-Install and set zsh as default shell-'
   if [ "$OS" = "$OS_MAC" ]; then
     brew reinstall zsh &&
-      chsh -s /usr/local/bin/zsh
+    chsh -s /usr/local/bin/zsh
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
     echo 'SKIP ZSH install, install yourself'
@@ -64,7 +64,7 @@ install_zsh() {
 _setup_zsh_files () {
   local zshrc=$DOTFILES/zsh/.zshrc.local
   if ! [ -f $zshrc ]; then
-     echo -e "source $DOTFILES/zsh/.zshrc\n" >> $zshrc
+    echo -e "source $DOTFILES/zsh/.zshrc\n" >> $zshrc
   fi
 
   symlink $DOTFILES/zsh/.p10k.zsh $HOME/.p10k.zsh
@@ -78,7 +78,7 @@ install_dev() {
       echo '[pkg] Homebrew is missing'
       echo 'Installing Homebrew...'
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" &&
-        echo 'Homebrew ready!'
+      echo 'Homebrew ready!'
     fi
 
     echo "-Install Packages-"
@@ -122,11 +122,11 @@ _setup_dev_files() {
     cp $DOTFILES/dev_files/.gitconfig $gitconfig
 
     cat $gitconfig |
-      sed "s/raz@boblet.com/$email/" |
-      sed "s/Raz Boblet/$name/" |
-      sed "s/razboblet/$username/" | tee $gitconfig
+    sed "s/raz@boblet.com/$email/" |
+    sed "s/Raz Boblet/$name/" |
+    sed "s/razboblet/$username/" | tee $gitconfig
   fi
-  
+
   symlink $DOTFILES/dev_files/.tmux.conf $HOME/.tmux.conf
   symlink $gitconfig $HOME/.gitconfig
 }
@@ -195,7 +195,7 @@ install_js() {
   echo -e "\n-Install prettierd for vim formatting-"
   npm install -g @fsouza/prettierd
   #brew reinstall fsouza/prettierd/prettierd
-  
+
   echo -e "-Install tsserver for js lsp-"
   npm install -g typescript typescript-language-server
 
@@ -240,7 +240,7 @@ install_elixir() {
     unzip -o elixir-ls-v0.16.0.zip -d ./elixir-ls
     cd -
   ) && sudo ln -fsv "${elixirls_path}/language_server.sh" "$HOME/.local/bin/elixir-ls" &&
-    echo 'elixir-ls installed!'
+  echo 'elixir-ls installed!'
 }
 
 install_ssh_key() {
@@ -314,12 +314,12 @@ install_bash() {
 install_mosh() {
 
   # sudo apt install perl protobuf-compiler libprotobuf-dev \
-  # libncurses5-dev zlib1g-dev libutempter-dev libssl-dev
+    # libncurses5-dev zlib1g-dev libutempter-dev libssl-dev
   brew reinstall pkg-config
 
   mkdir -pv $TMP
   cd $TMP && git clone --depth=1 https://github.com/mobile-shell/mosh.git &&\
-  cd mosh && ./autogen.sh && ./configure && make && sudo make install && cd -
+    cd mosh && ./autogen.sh && ./configure && make && sudo make install && cd -
 
 
   # if you get protobuf issues
@@ -357,7 +357,7 @@ main() {
   options+=('cpp:       Install C++')
   options+=('lua:       Install lua')
   options+=('sh:        Install bash')
-  
+
   echo 'Select one of the following options:'
   for i in "${!options[@]}"; do
     echo "${options[$i]}"
