@@ -45,6 +45,8 @@ install_zsh() {
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
   echo '-Download fonts for powerlevel10k-'
+  mkdir -pv $FONTS_FOLDER
+  echo $FONTS_FOLDER
   cd $FONTS_FOLDER && {
     curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf'
     curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf'
@@ -62,7 +64,7 @@ install_zsh() {
 _setup_zsh_files () {
   local zshrc=$DOTFILES/zsh/.zshrc.local
   if ! [ -f $zshrc ]; then
-     echo -e "source $DOTFILES/zsh/.zshrc\r\n" >> $zshrc
+     echo -e "source $DOTFILES/zsh/.zshrc\n" >> $zshrc
   fi
 
   symlink $DOTFILES/zsh/.p10k.zsh $HOME/.p10k.zsh
@@ -80,10 +82,10 @@ install_dev() {
     fi
 
     echo "-Install Packages-"
-    install_brew_packages asdf direnv mosh tmux tmuxp
+    install_brew_packages asdf direnv mosh tmux tmuxp tree
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
-    echo "SKIP dev packages, install yourself (asdf direnv mosh tmux tmuxp)"
+    echo "SKIP dev packages, install yourself (asdf direnv mosh tmux tmuxp tree)"
     exit 0
   fi
 
