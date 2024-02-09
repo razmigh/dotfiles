@@ -15,7 +15,7 @@ inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<CR>"
 lua require('plugins')
 
 " Color scheme
-set notermguicolors
+set termguicolors
 
 packadd! nvim-base16
 colorscheme base16-onedark
