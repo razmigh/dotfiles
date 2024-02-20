@@ -10,10 +10,6 @@ local on_attach = function()
     vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
     vim.keymap.set('n', '<Leader>D', vim.lsp.buf.type_definition, opts)
     vim.keymap.set("n", "<Leader>v", vim.lsp.buf.code_action, opts)
-    vim.keymap.set('n', '<Leader>f', vim.lsp.buf.format {
-        filter = function(client) return client.name ~= "tsserver" end,
-        async = true
-    }, opts)
     vim.keymap.set("n", "<Leader>O", vim.diagnostic.open_float, opts)
 
     require("vim.lsp.protocol").CompletionItemKind = {
