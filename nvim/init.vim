@@ -36,7 +36,7 @@ nmap <silent> <C-\> :nohlsearch<CR>
 
 " Format
 " nnoremap <silent> FJ :%!js-beautify --indent-size=2<CR>
-nnoremap <silent> <Leader>f <cmd>lua vim.lsp.buf.format({ async = true })<CR>
+nnoremap <silent> <Leader>f <cmd>lua vim.lsp.buf.format({ async = true, filter = function(client) return client.name ~= "volar" end})<CR>
 
 " Set ripgrep as the grep command
 if executable("rg")
