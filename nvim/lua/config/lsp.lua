@@ -89,6 +89,7 @@ lspconfig.eslint.setup({on_attach = on_attach, settings = {}})
 -- lspconfig.tsserver.setup({ on_attach = on_attach })
 
 lspconfig.volar.setup {
+    on_attach = on_attach,
     init_options = {
         typescript = {
             tsdk = vim.env.HOME ..
