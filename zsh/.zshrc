@@ -9,7 +9,7 @@ fi
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 
-plugins=(asdf docker git)
+plugins=(asdf docker git direnv)
 
 source $ZSH/oh-my-zsh.sh
 
