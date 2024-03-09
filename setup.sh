@@ -206,8 +206,8 @@ install_js() {
 install_elixir() {
   echo "--Install Elixir--"
 
-  ERLANG_VERSION=25.3
-  ELIXIR_VERSION=1.14.4-otp-25
+  ERLANG_VERSION=26.2.2
+  ELIXIR_VERSION=1.16.1-otp-26
 
   echo "-Install asdf packages-"
   asdf plugin add erlang
@@ -236,8 +236,8 @@ install_elixir() {
   local elixirls_path="${LANGUAGE_SERVERS}/elixir-ls"
   rm -rf $elixirls_path && mkdir -pv $elixirls_path
   cd $LANGUAGE_SERVERS && (
-    curl -fLO https://github.com/elixir-lsp/elixir-ls/releases/download/v0.16.0/elixir-ls-v0.16.0.zip
-    unzip -o elixir-ls-v0.16.0.zip -d ./elixir-ls
+    curl -fLO https://github.com/elixir-lsp/elixir-ls/releases/download/v0.20.0/elixir-ls-v0.20.0.zip
+    unzip -o elixir-ls-v0.20.0.zip -d ./elixir-ls
     cd -
   ) && sudo ln -fsv "${elixirls_path}/language_server.sh" "$HOME/.local/bin/elixir-ls" &&
   echo 'elixir-ls installed!'
