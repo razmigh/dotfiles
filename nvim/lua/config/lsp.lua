@@ -83,13 +83,14 @@ lspconfig.pylsp.setup({
 lspconfig.eslint.setup({on_attach = on_attach, settings = {}})
 
 -- lspconfig.tsserver.setup({ on_attach = on_attach })
-
+node_dir = vim.fn.system("npm root -g")
+node_dir = node_dir:gsub("[\n\r]", "")
 lspconfig.volar.setup {
     on_attach = on_attach,
     init_options = {
         typescript = {
-            tsdk = vim.env.HOME ..
-                '/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib'
+            tsdk = node_dir .. '/@fsouza/prettierd/node_modules/typescript/lib'
+            -- vim.env.HOME .. '/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib'
             -- tsdk = vim.fn.expand('$HOME/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib')
         }
     },
