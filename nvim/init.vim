@@ -40,7 +40,7 @@ nnoremap <silent> <Leader>f <cmd>lua vim.lsp.buf.format({ async = true, filter =
 
 " Set ripgrep as the grep command
 if executable("rg")
-  set grepprg=rg\ --vimgrep\ --no-heading
+  set grepprg=rg\ --vimgrep\ --no-heading\ --hidden\ --no-ignore-vcs 
   set grepformat=%f:%l:%c:%m,%f:%l:%m
 endif
 
