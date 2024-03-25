@@ -48,3 +48,6 @@ export LANG=en_US.UTF-8 LC_CTYPE=en_US.UTF-8
 
 # for direnv
 eval "$(direnv hook zsh)"
+
+# clean duplicates in path
+export PATH=$(echo "$PATH" | awk -v RS=':' -v ORS=":" '!a[$1]++{if (NR > 1) printf ORS; printf $a[$1]}')
