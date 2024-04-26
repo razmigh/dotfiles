@@ -82,10 +82,10 @@ install_dev() {
     fi
 
     echo "-Install Packages-"
-    install_brew_packages direnv mosh tmux tmuxp tree
+    install_brew_packages direnv mosh postgres tmux tmuxp tree
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
-    echo "SKIP dev packages, install yourself (direnv mosh tmux tmuxp tree)"
+    echo "SKIP dev packages, install yourself (direnv mosh postgres tmux tmuxp tree)"
     exit 0
   fi
 
