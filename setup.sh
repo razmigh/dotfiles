@@ -277,6 +277,31 @@ install_gpg_key() {
 }
 
 install_cpp() {
+  install_brew_packages cmake cmake-docs
+
+  # llvm
+  # run build a few times if it fails... try with different -j 8
+  local llvm=$LIBS/llvm-project
+  git clone https://github.com/llvm/llvm-project.git $llvm
+  mkdir -p $llvm/build
+  cd $llvm/build
+  cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DCMAKE_INSTALL_PREFIX=$LIBS/llvm -DCMAKE_BUILD_TYPE=Release ../llvm
+  make -j 16
+
+  # ccls
+  #
+  # IF src/utils.hh:18:20: fatal error: optional: No such file or director
+  # missing optional header files, install gcc 7 or newer
+  #
+  # IF /usr/bin/ld: cannot find -ltinfo
+  # sudo apt install libtinfo-dev
+  local ccls=$LIBS/ccls
+  git clone --depth=1 --recursive https://github.com/MaskRay/ccls $ccls
+  cd $ccls
+  cmake -H. -BRelease -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$llvm/build/bin
+  cmake --build Release
+  symlink $ccls/Release/ccls $HOME/.local/bin/ccls
+  
   _setup_cpp_files
 }
 

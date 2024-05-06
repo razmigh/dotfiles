@@ -36,6 +36,8 @@ alias tks="tmux kill-server"
 . $HOME/.asdf/asdf.sh
 #ASDF_PATH=`brew --prefix asdf`
 #. "$ASDF_PATH/libexec/asdf.sh"
+#
+export PATH="$PATH:$HOME/.local/bin"
 
 # for tmuxp
 export DISABLE_AUTO_TITLE='true'
@@ -51,3 +53,5 @@ eval "$(direnv hook zsh)"
 
 # clean duplicates in path
 export PATH=$(echo "$PATH" | awk -v RS=':' -v ORS=":" '!a[$1]++{if (NR > 1) printf ORS; printf $a[$1]}')
+
+export PYTHONPATH="$PYTHONPATH:/home/linuxbrew/.linuxbrew/bin"
