@@ -80,22 +80,32 @@ lspconfig.pylsp.setup({
 })
 
 -- js
-lspconfig.eslint.setup({on_attach = on_attach, settings = {}})
-
--- lspconfig.tsserver.setup({ on_attach = on_attach })
 node_dir = vim.fn.system("npm root -g")
 node_dir = node_dir:gsub("[\n\r]", "")
+
+lspconfig.eslint.setup({on_attach = on_attach, settings = {}})
+
 lspconfig.volar.setup {
     on_attach = on_attach,
-    init_options = {
-        typescript = {
-            tsdk = node_dir .. '/@fsouza/prettierd/node_modules/typescript/lib'
-            -- vim.env.HOME .. '/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib'
-            -- tsdk = vim.fn.expand('$HOME/.npm-packages/lib/node_modules/@fsouza/prettierd/node_modules/typescript/lib')
-        }
-    },
     filetypes = {
         'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue',
         'json'
     }
+}
+
+lspconfig.tsserver.setup{
+  init_options = {
+    plugins = {
+      {
+        name = "@vue/typescript-plugin",
+        location = node_dir .. "/@vue/typescript-plugin",
+        languages = {"javascript", "typescript", "vue"},
+      },
+    },
+  },
+  filetypes = {
+    "javascript",
+    "typescript",
+    "vue",
+  },
 }
