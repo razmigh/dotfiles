@@ -36,11 +36,11 @@ nmap <silent> <C-\> :nohlsearch<CR>
 
 " Format
 " nnoremap <silent> FJ :%!js-beautify --indent-size=2<CR>
-nnoremap <silent> <Leader>f <cmd>lua vim.lsp.buf.format({ async = true, filter = function(client) return client.name ~= "volar" end})<CR>
+nnoremap <silent> <Leader>f <cmd>lua vim.lsp.buf.format({ async = true, filter = function(client) return client.name ~= "volar" and client.name ~= "tsserver" end})<CR>
 
 " Set ripgrep as the grep command
 if executable("rg")
-  set grepprg=rg\ --vimgrep\ --no-heading\ --hidden\ --no-ignore-vcs 
+  set grepprg=rg\ -F\ --vimgrep\ --no-heading\ --hidden\ --no-ignore-vcs 
   set grepformat=%f:%l:%c:%m,%f:%l:%m
 endif
 
