@@ -180,6 +180,7 @@ install_python() {
   pip install python-lsp-server[pylint]
   #echo "-Install autopep for python formatting-"
   #pip install --upgrade autopep8
+  pip install requests lxml
 }
 
 install_js() {
