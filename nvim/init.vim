@@ -1,3 +1,5 @@
+filetype plugin on
+
 let mapleader = " "
 
 set shell=~/.local/bin/zsh
