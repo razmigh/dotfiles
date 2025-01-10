@@ -34,4 +34,6 @@ return require('packer').startup(function()
         event = "BufEnter",
         config = [[require('config.telescope')]]
     }
+
+    use 'chrisbra/csv.vim'
 end)

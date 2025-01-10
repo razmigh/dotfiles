@@ -283,6 +283,7 @@ install_cpp() {
   # llvm
   # run build a few times if it fails... try with different -j 8
   local llvm=$LIBS/llvm-project
+  rm -rf $llvm
   git clone https://github.com/llvm/llvm-project.git $llvm
   mkdir -p $llvm/build
   cd $llvm/build
@@ -296,7 +297,12 @@ install_cpp() {
   #
   # IF /usr/bin/ld: cannot find -ltinfo
   # sudo apt install libtinfo-dev
+  #
+  # IF can't find ClangConfig.cmake
+  # cp $llvm/build/lib/cmake/clang/ClangConfig.cmake $llvm/build/bin/
+
   local ccls=$LIBS/ccls
+  rm -rf $ccls
   git clone --depth=1 --recursive https://github.com/MaskRay/ccls $ccls
   cd $ccls
   cmake -H. -BRelease -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$llvm/build/bin
