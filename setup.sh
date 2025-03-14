@@ -90,7 +90,8 @@ install_dev() {
   fi
 
   echo "-Install asdf-"
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
+  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.16.5
+  cd ~/.asdf && make
 
   echo "-Install asdf direnv-"
   asdf plugin-add direnv
