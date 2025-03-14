@@ -33,7 +33,10 @@ alias tks="tmux kill-server"
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 # for asdf
-. $HOME/.asdf/asdf.sh
+export ASDF_DATA_DIR="$HOME/.asdf"
+export PATH="$ASDF_DATA_DIR/shims:$PATH"
+export PATH="$ASDF_DATA_DIR/bin:$PATH"
+#. $HOME/.asdf/asdf.sh
 #ASDF_PATH=`brew --prefix asdf`
 #. "$ASDF_PATH/libexec/asdf.sh"
 #
