@@ -94,8 +94,8 @@ install_dev() {
   cd ~/.asdf && make
 
   echo "-Install asdf direnv-"
-  asdf plugin-add direnv
-  asdf global direnv 2.33.0
+  asdf plugin add direnv
+  asdf set -h direnv 2.35.0
 
   echo "-Install fzf-"
   git clone --depth 1 https://github.com/junegunn/fzf.git $LIBS/fzf
@@ -172,7 +172,7 @@ install_python() {
   PYTHON_VERSION=3.9.16
   asdf plugin add python
   #asdf install python $PYTHON_VERSION
-  asdf global python $PYTHON_VERSION
+  asdf set -h python $PYTHON_VERSION
 
   echo "-Install pip-"
   python3 -m ensurepip
@@ -189,7 +189,7 @@ install_js() {
   #NODEJS_VERSION=18.7.0
   #asdf plugin add nodejs
   #asdf install nodejs $NODEJS_VERSION
-  #asdf global nodejs $NODEJS_VERSION
+  #asdf set -h nodejs $NODEJS_VERSION
 
   echo -e "-Install vscode-langservers for eslint-"
   npm i -g vscode-langservers-extracted
@@ -218,8 +218,8 @@ install_elixir() {
   KERL_BUILD_DOCS=yes asdf install erlang $ERLANG_VERSION
   asdf install elixir $ELIXIR_VERSION
 
-  asdf global erlang $ERLANG_VERSION
-  asdf global elixir $ELIXIR_VERSION
+  asdf set -h erlang $ERLANG_VERSION
+  asdf set -h elixir $ELIXIR_VERSION
 
   echo "-Install Elixir LS-"
 
