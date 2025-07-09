@@ -34,13 +34,16 @@ alias tks="tmux kill-server"
 
 # for asdf
 export ASDF_DATA_DIR="$HOME/.asdf"
+export PATH="$PATH:$ASDF_DATA_DIR/bin"
 export PATH="$ASDF_DATA_DIR/shims:$PATH"
-export PATH="$ASDF_DATA_DIR/bin:$PATH"
 #. $HOME/.asdf/asdf.sh
 #ASDF_PATH=`brew --prefix asdf`
 #. "$ASDF_PATH/libexec/asdf.sh"
 #
 export PATH="$PATH:$HOME/.local/bin"
+
+# for GO
+export PATH="$PATH:$HOME/go/bin"
 
 # for tmuxp
 export DISABLE_AUTO_TITLE='true'
