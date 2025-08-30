@@ -14,7 +14,15 @@ LANGUAGE_SERVERS=$INSTALLS/language_servers
 LIBS=$INSTALLS/libs
 TMP=$INSTALLS/.raztmp
 
+BIN=~/.local/bin
 FONTS_FOLDER=~/.local/share/fonts
+
+mkdir -pv $LANGUAGE_SERVERS
+mkdir -pv $LIBS
+mkdir -pv $TMP
+
+mkdir -pv $BIN
+mkdir -pv $FONTS_FOLDER
 
 symlink() {
   rm -rf $2
@@ -25,7 +33,15 @@ install_brew_packages() {
   local pkgs=("$@")
 
   for pkg in "${pkgs[@]}"; do
-    brew reinstall "$pkg"
+    brew install "$pkg"
+  done
+}
+
+install_apt_packages() {
+  local pkgs=("$@")
+
+  for pkg in "${pkgs[@]}"; do
+    sudo apt install "$pkg" -y
   done
 }
 
@@ -34,24 +50,24 @@ install_zsh() {
 
   echo '-Install and set zsh as default shell-'
   if [ "$OS" = "$OS_MAC" ]; then
-    brew reinstall zsh &&
+    install_brew_packages zsh &&
     chsh -s /usr/local/bin/zsh
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
-    echo 'SKIP ZSH install, install yourself'
+    install_apt_packages zsh curl &&
+    chsh -s /usr/local/bin/zsh
   fi
 
   echo '-Install oh-my-zsh-'
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
   echo '-Download fonts for powerlevel10k-'
-  mkdir -pv $FONTS_FOLDER
   echo $FONTS_FOLDER
   cd $FONTS_FOLDER && {
-    curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf'
-    curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf'
-    curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf'
-    curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf'
+    curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf' -C -
+    curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf' -C -
+    curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf' -C -
+    curl -fLO 'https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf' -C -
     cd -
   }
 
@@ -82,31 +98,47 @@ install_dev() {
     fi
 
     echo "-Install Packages-"
-    install_brew_packages direnv mosh postgres tmux tmuxp tree
+    install_brew_packages direnv mosh tmux tmuxp tree
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
-    echo "SKIP dev packages, install yourself (direnv mosh postgres tmux tmuxp tree)"
-    exit 0
+    echo "-Install Packages-"
+    install_apt_packages build-essential procps curl file git
+    install_apt_packages direnv mosh tmux tmuxp tree
   fi
 
-  echo "-Install asdf-"
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.16.5
-  cd ~/.asdf && make
+  echo '-Install go-'
+  local go=$LIBS/go
+  if [ "$OS" = "$OS_LINUX" ]; then
+    cd $TMP && (
+      curl -fLO  https://golang.org/dl/go1.21.2.linux-amd64.tar.gz -C -
+      tar -xf go1.21.2.linux-amd64.tar.gz
+      rm -rf $go
+      mv go $LIBS
+      cd -
+    )
+    symlink $go/bin/go $BIN/go
+  else
+    echo '-INSTALL GO YOURSELF, UPDATE SETUP-'
+    exit 1
+  fi
 
-  echo "-Install asdf direnv-"
-  asdf plugin add direnv
-  asdf set -h direnv 2.35.0
+  install_asdf
+
+  #echo "-Install asdf direnv-"
+  #asdf plugin add direnv
+  #asdf install direnv latest
+  #asdf set -u direnv latest
 
   echo "-Install fzf-"
   git clone --depth 1 https://github.com/junegunn/fzf.git $LIBS/fzf
   $LIBS/fzf/install
 
+  _setup_dev_files
+
   # echo -e "\nDownload and launch docker installer"
   # https://docs.docker.com/desktop/install/mac-install/
-  echo -e "\nOpen docker download page..."
-  open https://www.docker.com/
-
-  _setup_dev_files
+  echo -e "\nOpen docker install page..."
+  open https://docs.docker.com/engine/install/
 }
 
 _setup_dev_files() {
@@ -132,18 +164,39 @@ _setup_dev_files() {
   symlink $gitconfig $HOME/.gitconfig
 }
 
+install_asdf() {
+  echo "-Install asdf-"
+  local asdf_dir="${INSTALLS}/asdf"
+  git clone https://github.com/asdf-vm/asdf.git $asdf_dir --branch v0.16.0
+  cd $asdf_dir && make
+  symlink $asdf_dir/asdf $BIN/asdf
+}
+
 install_nvim() {
   echo "--Install Neovim--"
   if [ "$OS" = "$OS_MAC" ]; then
-    brew reinstall neovim
+    install_brew_packages neovim
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
-    echo "SKIP neovim install, install yourself"
+    install_apt_packages ninja-build gettext cmake curl build-essential
+    local nvim=$LIBS/neovim
+    git clone https://github.com/neovim/neovim $nvim
+    cd $nvim
+    make CMAKE_BUILD_TYPE=Release
+    sudo make install
+
+    symlink $nvim/build/bin/nvim $BIN/nvim
   fi
 
   _setup_nvim_files
 
+  echo '-Install tree-sitter-cli for latex-'
+  npm install -g tree-sitter-cli
+  local npmroot=$(npm root -g)
+  symlink $npmroot/tree-sitter-cli/tree-sitter $BIN/tree-sitter
+
   echo "-Install Packer-"
+  rm -f ~/.config/nvim/plugin/packer_compiled.lua
   local packer=~/.local/share/nvim/site/pack/packer/start/packer.nvim
   rm -rf $packer
   git clone --depth 1 https://github.com/wbthomason/packer.nvim $packer
@@ -159,20 +212,20 @@ install_nvim() {
     install_brew_packages ripgrep
   fi
   if [ "$OS" = "$OS_LINUX" ]; then
-    echo "SKIP nvim package install, install yourself (ripgrep)"
+    install_apt_packages ripgrep
   fi
 }
 
 _setup_nvim_files() {
+  mkdir -pv $HOME/.config/nvim
   symlink $DOTFILES/nvim/init.vim $HOME/.config/nvim/init.vim
   symlink $DOTFILES/nvim/lua $HOME/.config/nvim/lua
 }
 
 install_python() {
-  PYTHON_VERSION=3.9.16
   asdf plugin add python
-  #asdf install python $PYTHON_VERSION
-  asdf set -h python $PYTHON_VERSION
+  asdf install python latest
+  asdf set -u python latest
 
   echo "-Install pip-"
   python3 -m ensurepip
@@ -186,10 +239,9 @@ install_python() {
 
 install_js() {
   echo "--Install JS & Node--"
-  #NODEJS_VERSION=18.7.0
-  #asdf plugin add nodejs
-  #asdf install nodejs $NODEJS_VERSION
-  #asdf set -h nodejs $NODEJS_VERSION
+  asdf plugin add nodejs
+  asdf install nodejs latest
+  asdf set -u nodejs latest
 
   echo -e "-Install vscode-langservers for eslint-"
   npm i -g vscode-langservers-extracted
@@ -208,18 +260,18 @@ install_js() {
 install_elixir() {
   echo "--Install Elixir--"
 
-  ERLANG_VERSION=26.2.2
-  ELIXIR_VERSION=1.16.1-otp-26
+  echo '-Install inotify-tools-'
+  install_apt_packages inotify-tools
 
   echo "-Install asdf packages-"
   asdf plugin add erlang
   asdf plugin add elixir
 
-  KERL_BUILD_DOCS=yes asdf install erlang $ERLANG_VERSION
-  asdf install elixir $ELIXIR_VERSION
+  KERL_BUILD_DOCS=yes asdf install erlang latest
+  asdf install elixir latest
 
-  asdf set -h erlang $ERLANG_VERSION
-  asdf set -h elixir $ELIXIR_VERSION
+  asdf set -u erlang 27.3.4
+  asdf set -u elixir 1.18.3-otp-27
 
   echo "-Install Elixir LS-"
 
@@ -232,16 +284,16 @@ install_elixir() {
   #cd $elixirls_path
   #mix deps.get && mix compile && mix elixir_ls.release -o release
   #chmod +x "${bin_path}/language_server.sh"
-  #sudo ln -fsv "${bin_path}/language_server.sh" "/usr/local/bin/elixir-ls" &&
+  #symlink "${bin_path}/language_server.sh" "/usr/local/bin/elixir-ls" &&
   #  echo 'elixir-ls installed!'
 
   local elixirls_path="${LANGUAGE_SERVERS}/elixir-ls"
   rm -rf $elixirls_path && mkdir -pv $elixirls_path
   cd $LANGUAGE_SERVERS && (
-    curl -fLO https://github.com/elixir-lsp/elixir-ls/releases/download/v0.20.0/elixir-ls-v0.20.0.zip
-    unzip -o elixir-ls-v0.20.0.zip -d ./elixir-ls
+    curl -fLO https://github.com/elixir-lsp/elixir-ls/releases/download/v0.27.2/elixir-ls-v0.27.2.zip -C -
+    unzip -o elixir-ls-v0.27.2.zip -d ./elixir-ls
     cd -
-  ) && sudo ln -fsv "${elixirls_path}/language_server.sh" "$HOME/.local/bin/elixir-ls" &&
+  ) && symlink "${elixirls_path}/language_server.sh" "$BIN/elixir-ls" &&
   echo 'elixir-ls installed!'
 }
 
@@ -308,7 +360,7 @@ install_cpp() {
   cd $ccls
   cmake -H. -BRelease -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$llvm/build/bin
   cmake --build Release
-  symlink $ccls/Release/ccls $HOME/.local/bin/ccls
+  symlink $ccls/Release/ccls $BIN/ccls
   
   _setup_cpp_files
 }
@@ -333,8 +385,7 @@ install_lua() {
 }
 
 _setup_lua_files() {
-  mkdir -pv $HOME/.local/bin
-  symlink $LIBS/LuaFormatter/lua-format $HOME/.local/bin/lua-format
+  symlink $LIBS/LuaFormatter/lua-format $BIN/lua-format
 }
 
 install_bash() {
@@ -344,16 +395,18 @@ install_bash() {
 
 # untested
 # https://gist.github.com/kuntau/37698a5159ceac40982b1f7ae96b7db8#file-mosh-md
-install_mosh() {
+install_ssh_mosh_server() {
+  echo '-Install ssh-'
+  install_apt_packages ssh
+  sudo sed -i 's/#Port 22/Port 22222/g' /etc/ssh/sshd_config
 
-  # sudo apt install perl protobuf-compiler libprotobuf-dev \
-    # libncurses5-dev zlib1g-dev libutempter-dev libssl-dev
-  brew reinstall pkg-config
+  echo '-Install mosh-'
+  sudo apt install perl protobuf-compiler libprotobuf-dev \
+    libncurses5-dev zlib1g-dev libutempter-dev libssl-dev \
+    pkg-config autoconf
 
-  mkdir -pv $TMP
-  cd $TMP && git clone --depth=1 https://github.com/mobile-shell/mosh.git &&\
-    cd mosh && ./autogen.sh && ./configure && make && sudo make install && cd -
-
+  cd $TMP && git clone --depth=1 https://github.com/mobile-shell/mosh.git
+  cd $TMP/mosh && ./autogen.sh && ./configure && make && sudo make install && cd -
 
   # if you get protobuf issues
   # sudo find / -name "libprotobuf.so*"
@@ -361,6 +414,26 @@ install_mosh() {
 
   # if mosh cant find it (shared module blabla), make sure it exists here
   # /usr/lib/x86_64-linux-gnu/libprotobuf.so.24.4.0
+
+  echo '-Install fail2ban-'
+  sudo apt install fail2ban
+  # (config file /etc/fail2ban/jail.conf)
+  sudo systemctl restart fail2ban
+  sudo systemctl enable fail2ban
+  # sudo systemctl status fail2ban
+
+  echo '-Configure ufw-'
+  sudo ufw default deny incoming
+  sudo ufw default allow outgoing
+
+  sudo ufw allow 22222
+  sudo systemctl restart ssh
+
+  sudo ufw allow 60000:60009/udp
+
+  sudo ufw enable
+
+  echo 'SSH & MOSH SERVER READY - double-check /etc/ssh/sshd_config & configure port forwarding'
 }
 
 setup_all_files() {
@@ -379,9 +452,11 @@ main() {
   options+=('zsh:       Install zsh')
   options+=('dev:       Install base dev')
   options+=('nvim:      Install neovim')
+  options+=('asdf:      Install asdf')
   options+=('')
   options+=('ssh:       Install SSH key')
   options+=('gpg:       Install GPG key')
+  options+=('sshd:      Setup SSH/mosh server')
   options+=('setupall:  Setup all files')
   options+=('')
   options+=('py:        Install python')
@@ -403,9 +478,11 @@ main() {
     zsh) install_zsh ;;
     dev) install_dev ;;
     nvim) install_nvim ;;
+    asdf) install_asdf ;;
 
     ssh) install_ssh_key ;;
     gpg) install_gpg_key ;;
+    sshd) install_ssh_mosh_server ;;
     setupall) setup_all_files ;;
 
     py) install_python ;;

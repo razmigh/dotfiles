@@ -1,3 +1,6 @@
+# for GPG
+export GPG_TTY=$(tty)
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -33,8 +36,7 @@ alias tks="tmux kill-server"
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 # for asdf
-export ASDF_DATA_DIR="$HOME/.asdf"
-export PATH="$PATH:$ASDF_DATA_DIR/bin"
+#export ASDF_DATA_DIR="$HOME/.asdf"
 export PATH="$ASDF_DATA_DIR/shims:$PATH"
 #. $HOME/.asdf/asdf.sh
 #ASDF_PATH=`brew --prefix asdf`
@@ -47,9 +49,6 @@ export PATH="$PATH:$HOME/go/bin"
 
 # for tmuxp
 export DISABLE_AUTO_TITLE='true'
-
-# for GPG
-export GPG_TTY=$(tty)
 
 # for mosh
 export LANG=en_US.UTF-8 LC_CTYPE=en_US.UTF-8
