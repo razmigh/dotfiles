@@ -36,4 +36,11 @@ return require('packer').startup(function()
     }
 
     use 'chrisbra/csv.vim'
+
+    use 'othree/html5.vim'
+    use 'pangloss/vim-javascript'
+    use {
+        'evanleck/vim-svelte',
+        branch = 'main'
+    }
 end)
