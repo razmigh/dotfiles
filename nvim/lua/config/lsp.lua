@@ -109,3 +109,8 @@ lspconfig.ts_ls.setup{
     "vue",
   },
 }
+
+lspconfig.svelte.setup{
+    on_attach = on_attach,
+}
+

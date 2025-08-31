@@ -255,6 +255,11 @@ install_js() {
 
   echo -e "-Install volar-"
   npm install -g @vue/language-server
+
+  echo -e "-Install svelte-"
+  npm install -g svelte-language-server
+  local npmroot=$(npm root -g)
+  symlink $npmroot/../../bin/svelteserver $BIN/svelteserver
 }
 
 install_elixir() {
