@@ -48,8 +48,8 @@ if executable("rg")
 endif
 
 function ProjectFiles()
-  " silent! !git rev-parse --is-inside-work-tree
-  " if v:shell_error == 0
+  "silent! !git rev-parse --is-inside-work-tree
+  "if v:shell_error == 0
   "  :Telescope git_files
   "else
     :Telescope find_files
