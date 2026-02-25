@@ -53,6 +53,7 @@ cmp.setup {
 }
 
 -- elixir
+vim.lsp.enable('elixirls')
 vim.lsp.config('elixirls', {
     on_attach = on_attach,
     settings = {elixirLS = {dialyzerEnabled = false}, fetchDeps = false},
@@ -62,10 +63,12 @@ vim.lsp.config('elixirls', {
 })
 
 -- cpp
+vim.lsp.enable('clangd')
 vim.lsp.config('clangd', {on_attach = on_attach, capabilities = {offsetEncoding = { 'utf-16' }}})
 
 -- py
 -- if not working, try running pylsp, if error: no preset version, uninstall and reinstall with current py version
+vim.lsp.enable('pylsp')
 vim.lsp.config('pylsp', {
     on_attach = on_attach,
     settings = {
@@ -81,16 +84,19 @@ vim.lsp.config('pylsp', {
 node_dir = vim.fn.system("npm root -g")
 node_dir = node_dir:gsub("[\n\r]", "")
 
+vim.lsp.enable('eslint')
 vim.lsp.config('eslint', {on_attach = on_attach, settings = {}})
 
+vim.lsp.enable('volar')
 vim.lsp.config('volar', {
     on_attach = on_attach,
     filetypes = {
-        'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue',
+        'javascript', 'javascriptreact', 'typescriptreact', 'vue',
         'json'
     }
 })
 
+vim.lsp.enable('ts_ls')
 vim.lsp.config('ts_ls', {
   init_options = {
     plugins = {
@@ -108,6 +114,7 @@ vim.lsp.config('ts_ls', {
   },
 })
 
+vim.lsp.enable('svelte')
 vim.lsp.config('svelte', {
     on_attach = on_attach,
 })
