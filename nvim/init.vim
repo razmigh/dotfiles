@@ -32,7 +32,7 @@ nnoremap <silent> <Leader>, :Telescope buffers<CR>
 nnoremap <silent> <Leader>/ :Telescope live_grep<CR>
 nnoremap <silent> <Leader>q :bdelete<CR>
 nnoremap <silent> <Leader>Q :bdelete!<CR>
-nnoremap <silent> <Leader>- :ClangdSwitchSourceHeader<CR>
+nnoremap <silent> <Leader>- :LspClangdSwitchSourceHeader<CR>
 
 " Clear highlighted search
 nmap <silent> <C-\> :nohlsearch<CR>

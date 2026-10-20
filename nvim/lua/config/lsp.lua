@@ -64,7 +64,15 @@ vim.lsp.config('elixirls', {
 
 -- cpp
 vim.lsp.enable('clangd')
-vim.lsp.config('clangd', {on_attach = on_attach, capabilities = {offsetEncoding = { 'utf-16' }}})
+-- Keep lspconfig's default on_attach, which defines :LspClangdSwitchSourceHeader
+local clangd_default_on_attach = vim.lsp.config.clangd.on_attach
+vim.lsp.config('clangd', {
+    on_attach = function(client, bufnr)
+        if clangd_default_on_attach then clangd_default_on_attach(client, bufnr) end
+        on_attach(client, bufnr)
+    end,
+    capabilities = {offsetEncoding = { 'utf-16' }}
+})
 
 -- py
 -- if not working, try running pylsp, if error: no preset version, uninstall and reinstall with current py version
