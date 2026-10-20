@@ -2,8 +2,6 @@ return require('packer').startup(function()
     -- Packer can manage itself
     use 'wbthomason/packer.nvim'
 
-    use 'wakatime/vim-wakatime'
-
     use {"neovim/nvim-lspconfig", config = [[require('config.lsp')]]}
 
     use {"rhysd/git-messenger.vim"} -- git browser
@@ -11,6 +9,7 @@ return require('packer').startup(function()
     use 'hrsh7th/cmp-nvim-lsp' -- LSP source for nvim-cmp
     use 'saadparwaiz1/cmp_luasnip' -- Snippets source for nvim-cmp
     use 'L3MON4D3/LuaSnip' -- Snippets plugin
+    use {'neoclide/coc.nvim', branch = 'release'}
 
     use {
         "nvimtools/none-ls.nvim",

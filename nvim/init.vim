@@ -39,7 +39,14 @@ nmap <silent> <C-\> :nohlsearch<CR>
 
 " Format
 " nnoremap <silent> FJ :%!js-beautify --indent-size=2<CR>
-nnoremap <silent> <Leader>f <cmd>lua vim.lsp.buf.format({ async = true, filter = function(client) return client.name ~= "volar" and client.name ~= "tsserver" end})<CR>
+function! FormatDocument() abort
+  if &filetype ==# 'xml'
+    call CocActionAsync('format')
+  else
+    lua vim.lsp.buf.format({ async = true, filter = function(client) return client.name ~= "volar" and client.name ~= "tsserver" end})
+  endif
+endfunction
+nnoremap <silent> <Leader>f <Cmd>call FormatDocument()<CR>
 
 " Set ripgrep as the grep command
 if executable("rg")
@@ -60,3 +67,4 @@ endfunction
 autocmd! BufWritePost $MYVIMRC source $MYVIMRC | echom "Sourced " . $MYVIMRC
 
 autocmd! FileType cpp setlocal shiftwidth=3 tabstop=3 softtabstop=3
+autocmd! FileType xml setlocal shiftwidth=3 tabstop=3 softtabstop=3

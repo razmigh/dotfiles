@@ -220,6 +220,7 @@ _setup_nvim_files() {
   mkdir -pv $HOME/.config/nvim
   symlink $DOTFILES/nvim/init.vim $HOME/.config/nvim/init.vim
   symlink $DOTFILES/nvim/lua $HOME/.config/nvim/lua
+  symlink $DOTFILES/nvim/coc-settings.json $HOME/.config/nvim/coc-settings.json
 }
 
 install_python() {

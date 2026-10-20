@@ -90,27 +90,21 @@ vim.lsp.config('eslint', {on_attach = on_attach, settings = {}})
 vim.lsp.enable('volar')
 vim.lsp.config('volar', {
     on_attach = on_attach,
+    capabilities = capabilities,
     filetypes = {
-        'javascript', 'javascriptreact', 'typescriptreact', 'vue',
-        'json'
+        'vue'
     }
 })
 
 vim.lsp.enable('ts_ls')
 vim.lsp.config('ts_ls', {
-  init_options = {
-    plugins = {
-      {
-        name = "@vue/typescript-plugin",
-        location = node_dir .. "/@vue/typescript-plugin",
-        languages = {"javascript", "typescript", "vue"},
-      },
-    },
-  },
+  on_attach = on_attach,
+  capabilities = capabilities,
   filetypes = {
     "javascript",
+    "javascriptreact",
     "typescript",
-    "vue",
+    "typescriptreact",
   },
 })
 

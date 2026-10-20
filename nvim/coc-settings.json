@@ -1,0 +1,8 @@
+{
+  "xml.format.splitAttributes": "splitNewLine",
+  "xml.format.splitAttributesIndentSize": 1,
+  "xml.format.closingBracketNewLine": true,
+  "xml.format.preserveAttributeLineBreaks": true,
+  "xml.format.preservedNewlines": 2,
+  "xml.format.spaceBeforeEmptyCloseTag": false
+}
