@@ -49,7 +49,14 @@ local luasnip = require 'luasnip'
 local cmp = require 'cmp'
 cmp.setup {
     snippet = {expand = function(args) luasnip.lsp_expand(args.body) end},
-    sources = {{name = 'nvim_lsp'}, {name = 'luasnip'}}
+    mapping = cmp.mapping.preset.insert({
+        ['<C-Space>'] = cmp.mapping.complete(),
+        ['<CR>'] = cmp.mapping.confirm({select = true})
+    }),
+    sources = cmp.config.sources(
+        {{name = 'nvim_lsp'}, {name = 'luasnip'}},
+        {{name = 'buffer'}}
+    )
 }
 
 -- elixir
@@ -71,7 +78,8 @@ vim.lsp.config('clangd', {
         if clangd_default_on_attach then clangd_default_on_attach(client, bufnr) end
         on_attach(client, bufnr)
     end,
-    capabilities = {offsetEncoding = { 'utf-16' }}
+    -- utf-16 to match null-ls and avoid mixed offset encodings in the same buffer
+    capabilities = vim.tbl_deep_extend('force', capabilities, {offsetEncoding = { 'utf-16' }})
 })
 
 -- py
@@ -79,6 +87,7 @@ vim.lsp.config('clangd', {
 vim.lsp.enable('pylsp')
 vim.lsp.config('pylsp', {
     on_attach = on_attach,
+    capabilities = capabilities,
     settings = {
         pylsp = {
             plugins = {
@@ -89,34 +98,53 @@ vim.lsp.config('pylsp', {
 })
 
 -- js
-node_dir = vim.fn.system("npm root -g")
-node_dir = node_dir:gsub("[\n\r]", "")
+local node_dir = vim.fn.system("npm root -g"):gsub("[\n\r]", "")
+-- Global typescript is v7 (native, no tsserver), so fall back to a v5 install when the project has none
+local fallback_tsdk = node_dir .. '/@fsouza/prettierd/node_modules/typescript/lib'
 
 vim.lsp.enable('eslint')
-vim.lsp.config('eslint', {on_attach = on_attach, settings = {}})
+vim.lsp.config('eslint', {on_attach = on_attach, capabilities = capabilities, settings = {}})
 
-vim.lsp.enable('volar')
-vim.lsp.config('volar', {
+-- vue_ls (v3) only handles HTML/CSS in .vue files; ts_ls handles the script via @vue/typescript-plugin
+vim.lsp.enable('vue_ls')
+vim.lsp.config('vue_ls', {
     on_attach = on_attach,
     capabilities = capabilities,
-    filetypes = {
-        'vue'
-    }
+    cmd = function(dispatchers, config)
+        local tsdk = config.root_dir and vim.fs.joinpath(config.root_dir, 'node_modules/typescript/lib')
+        if not (tsdk and vim.uv.fs_stat(tsdk)) then tsdk = fallback_tsdk end
+        return vim.lsp.rpc.start({'vue-language-server', '--stdio', '--tsdk=' .. tsdk}, dispatchers)
+    end,
 })
 
 vim.lsp.enable('ts_ls')
 vim.lsp.config('ts_ls', {
   on_attach = on_attach,
   capabilities = capabilities,
+  init_options = {
+    tsserver = {fallbackPath = fallback_tsdk},
+    plugins = {
+      {
+        name = "@vue/typescript-plugin",
+        location = node_dir .. "/@vue/typescript-plugin",
+        languages = {"vue"},
+      },
+    },
+  },
   filetypes = {
     "javascript",
     "javascriptreact",
     "typescript",
     "typescriptreact",
+    "vue",
   },
 })
 
-vim.lsp.enable('svelte')
+-- Only enable where svelteserver is installed, to avoid spawn errors on other machines
+if vim.fn.executable('svelteserver') == 1 then
+    vim.lsp.enable('svelte')
+end
 vim.lsp.config('svelte', {
     on_attach = on_attach,
+    capabilities = capabilities,
 })

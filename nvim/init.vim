@@ -12,9 +12,6 @@ set number
 " set cursorline
 set clipboard^=unnamedplus
 
-" Use <CR> to confirm selection
-inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<CR>"
-
 lua require('plugins')
 
 " Color scheme
@@ -43,7 +40,14 @@ function! FormatDocument() abort
   if &filetype ==# 'xml'
     call CocActionAsync('format')
   else
-    lua vim.lsp.buf.format({ async = true, filter = function(client) return client.name ~= "volar" and client.name ~= "tsserver" end})
+    " Prefer null-ls (prettierd/clang-format) when it can format the buffer, so servers don't format twice
+    lua << trim EOF
+      local use_null_ls = #vim.lsp.get_clients({ bufnr = 0, name = "null-ls", method = "textDocument/formatting" }) > 0
+      vim.lsp.buf.format({ async = true, filter = function(client)
+        if use_null_ls then return client.name == "null-ls" end
+        return not vim.tbl_contains({ "volar", "vue_ls", "ts_ls" }, client.name)
+      end })
+    EOF
   endif
 endfunction
 nnoremap <silent> <Leader>f <Cmd>call FormatDocument()<CR>

@@ -1,4 +1,5 @@
 {
+  "suggest.autoTrigger": "none",
   "xml.format.splitAttributes": "splitNewLine",
   "xml.format.splitAttributesIndentSize": 1,
   "xml.format.closingBracketNewLine": true,
