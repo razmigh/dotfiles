@@ -152,16 +152,70 @@ _setup_dev_files() {
     echo "Enter your username for git"
     read -r username
 
-    cp $DOTFILES/dev_files/.gitconfig $gitconfig
+    sed -e "s/raz@boblet.com/$email/" \
+        -e "s/Raz Boblet/$name/" \
+        -e "s/razboblet/$username/" \
+        $DOTFILES/dev_files/.gitconfig | tee $gitconfig
 
-    cat $gitconfig |
-    sed "s/raz@boblet.com/$email/" |
-    sed "s/Raz Boblet/$name/" |
-    sed "s/razboblet/$username/" | tee $gitconfig
+    echo "Add a git profile per host (e.g. github.com, your Bitbucket host)? [y/N]"
+    read -r add_profiles
+    while [[ "$add_profiles" =~ ^[Yy] ]]; do
+      add_git_profile
+      echo "Add another git profile? [y/N]"
+      read -r add_profiles
+    done
   fi
 
   symlink $DOTFILES/dev_files/.tmux.conf $HOME/.tmux.conf
   symlink $gitconfig $HOME/.gitconfig
+  for profile_gitconfig in $DOTFILES/dev_files/.gitconfig.*; do
+    if [ -f "$profile_gitconfig" ] && [ "$profile_gitconfig" != "$gitconfig" ]; then
+      symlink $profile_gitconfig $HOME/$(basename $profile_gitconfig)
+    fi
+  done
+}
+
+# Git identity used for repos with a remote on a given host; other repos keep the [user] in .gitconfig.local.
+# If a repo has remotes on several profiled hosts, the profile added last wins.
+add_git_profile() {
+  local gitconfig=$DOTFILES/dev_files/.gitconfig.local
+
+  if ! [ -f $gitconfig ]; then
+    echo "Run 'dev' or 'setupall' first to create $gitconfig"
+    return 1
+  fi
+
+  echo "Enter the git host for this profile (e.g. github.com, bitbucket.org)"
+  read -r host
+  echo "Enter a name for this profile (e.g. github, bitbucket)"
+  read -r profile
+  if ! [[ "$host" =~ ^[A-Za-z0-9.-]+$ && "$profile" =~ ^[A-Za-z0-9_-]+$ && "$profile" != "local" ]]; then
+    echo "Invalid host or profile name"
+    return 1
+  fi
+  echo "Enter your full name for $host"
+  read -r name
+  echo "Enter your email for $host (on GitHub, ID+username@users.noreply.github.com keeps it private)"
+  read -r email
+
+  local profile_gitconfig=$DOTFILES/dev_files/.gitconfig.$profile
+  sed -e "s/raz@boblet.com/$email/" \
+      -e "s/Raz Boblet/$name/" \
+      $DOTFILES/dev_files/.gitconfig-profile > $profile_gitconfig
+
+  if ! grep -qF "hasconfig:remote.*.url:https://$host/**" $gitconfig; then
+    {
+      echo ""
+      echo "# $profile profile: repos with a remote on $host"
+      for pattern in "git@$host:*" "git@$host:*/**" "ssh://*@$host/**" "ssh://*@$host:*/**" "https://$host/**" "https://*@$host/**"; do
+        echo "[includeIf \"hasconfig:remote.*.url:$pattern\"]"
+        echo "	path = ~/.gitconfig.$profile"
+      done
+    } >> $gitconfig
+  fi
+
+  symlink $profile_gitconfig $HOME/.gitconfig.$profile
+  echo "Added git profile '$profile' for $host"
 }
 
 install_asdf() {
@@ -464,6 +518,7 @@ main() {
   options+=('gpg:       Install GPG key')
   options+=('sshd:      Setup SSH/mosh server')
   options+=('setupall:  Setup all files')
+  options+=('git:       Add a git profile for a host')
   options+=('')
   options+=('py:        Install python')
   options+=('js:        Install js/node')
@@ -490,6 +545,7 @@ main() {
     gpg) install_gpg_key ;;
     sshd) install_ssh_mosh_server ;;
     setupall) setup_all_files ;;
+    git) add_git_profile ;;
 
     py) install_python ;;
     js) install_js ;;
