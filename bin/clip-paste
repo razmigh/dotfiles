@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Print the system clipboard on macOS, WSL, Wayland or X11.
+# Over SSH (or with no clipboard tool) it falls back to the latest tmux buffer;
+# there, use your terminal's paste shortcut to paste from your local clipboard.
+
+has() { command -v "$1" >/dev/null 2>&1; }
+
+is_ssh() {
+  if [ -n "$TMUX" ]; then
+    tmux show-environment SSH_CONNECTION 2>/dev/null | grep -q '^SSH_CONNECTION='
+  else
+    [ -n "$SSH_CONNECTION$SSH_TTY" ]
+  fi
+}
+
+is_wsl() { [ -n "$WSL_DISTRO_NAME" ] || grep -qi microsoft /proc/version 2>/dev/null; }
+
+if ! is_ssh; then
+  if [ "$(uname -s)" = Darwin ] && has pbpaste; then
+    exec pbpaste
+  elif is_wsl && has win32yank.exe; then
+    exec win32yank.exe -o --lf
+  elif is_wsl && has powershell.exe; then
+    powershell.exe -NoProfile -Command '[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-Clipboard -Raw' |
+      sed 's/\r$//'
+    exit
+  elif [ -n "$WAYLAND_DISPLAY" ] && has wl-paste; then
+    exec wl-paste --no-newline
+  elif [ -n "$DISPLAY" ] && has xsel; then
+    exec xsel --clipboard --output
+  elif [ -n "$DISPLAY" ] && has xclip; then
+    exec xclip -selection clipboard -o
+  fi
+fi
+
+if [ -n "$TMUX" ]; then
+  exec tmux save-buffer -
+fi
+echo "clip-paste: no clipboard available" >&2
+exit 1

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Copy stdin (or the given files) to the system clipboard on macOS, WSL, Wayland or X11.
+# Over SSH it uses OSC 52, so the text lands in the clipboard of the machine you are sitting at.
+# Inside tmux the text is also kept in the tmux buffer list (prefix + = to browse).
+#
+# --from-tmux: used by tmux copy-pipe, which already stores the buffer and emits OSC 52 itself.
+
+from_tmux=0
+if [ "$1" = "--from-tmux" ]; then
+  from_tmux=1
+  shift
+fi
+
+# Read everything first (keeping trailing newlines) so it can go to several targets.
+data=$(cat -- "$@"; printf x)
+data=${data%x}
+
+has() { command -v "$1" >/dev/null 2>&1; }
+
+is_ssh() {
+  if [ -n "$TMUX" ]; then
+    # A pane's env is frozen at creation; the session env follows the latest attach.
+    tmux show-environment SSH_CONNECTION 2>/dev/null | grep -q '^SSH_CONNECTION='
+  else
+    [ -n "$SSH_CONNECTION$SSH_TTY" ]
+  fi
+}
+
+is_wsl() { [ -n "$WSL_DISTRO_NAME" ] || grep -qi microsoft /proc/version 2>/dev/null; }
+
+osc52() {
+  [ $from_tmux = 1 ] && return
+  if [ -n "$TMUX" ]; then
+    # -w forwards to the outer terminal's clipboard (needs set-clipboard on) and keeps a tmux buffer.
+    printf '%s' "$data" | tmux load-buffer -w - 2>/dev/null
+    from_tmux=1
+  else
+    printf '\033]52;c;%s\a' "$(printf '%s' "$data" | base64 | tr -d '\r\n')" >/dev/tty
+  fi
+}
+
+if is_ssh; then
+  osc52
+elif [ "$(uname -s)" = Darwin ] && has pbcopy; then
+  printf '%s' "$data" | pbcopy
+elif is_wsl && has win32yank.exe; then
+  printf '%s' "$data" | win32yank.exe -i --crlf
+elif is_wsl && has clip.exe; then
+  printf '%s' "$data" | clip.exe
+elif [ -n "$WAYLAND_DISPLAY" ] && has wl-copy; then
+  printf '%s' "$data" | wl-copy >/dev/null 2>&1
+elif [ -n "$DISPLAY" ] && has xsel; then
+  printf '%s' "$data" | xsel --clipboard --input >/dev/null 2>&1
+elif [ -n "$DISPLAY" ] && has xclip; then
+  # xclip keeps stdout open while it owns the selection; detach it so callers don't hang.
+  printf '%s' "$data" | xclip -selection clipboard >/dev/null 2>&1
+else
+  osc52
+fi
+
+# Secondary copy in the tmux buffer history.
+if [ -n "$TMUX" ] && [ $from_tmux = 0 ]; then
+  printf '%s' "$data" | tmux load-buffer - 2>/dev/null
+fi
+exit 0

@@ -124,6 +124,8 @@ install_dev() {
 
   install_asdf
 
+  install_clipboard
+
   #echo "-Install asdf direnv-"
   #asdf plugin add direnv
   #asdf install direnv latest
@@ -167,6 +169,9 @@ _setup_dev_files() {
   fi
 
   symlink $DOTFILES/dev_files/.tmux.conf $HOME/.tmux.conf
+  for script in $DOTFILES/bin/*; do
+    symlink $script $BIN/$(basename $script)
+  done
   symlink $gitconfig $HOME/.gitconfig
   for profile_gitconfig in $DOTFILES/dev_files/.gitconfig.*; do
     if [ -f "$profile_gitconfig" ] && [ "$profile_gitconfig" != "$gitconfig" ]; then
@@ -216,6 +221,36 @@ add_git_profile() {
 
   symlink $profile_gitconfig $HOME/.gitconfig.$profile
   echo "Added git profile '$profile' for $host"
+}
+
+# Clipboard tool used by bin/clip-copy and bin/clip-paste (macOS and WSL have one built in).
+install_clipboard() {
+  echo '-Install clipboard tool-'
+  if [ "$OS" != "$OS_LINUX" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+    echo 'Built in (pbcopy / clip.exe), nothing to install'
+    return
+  fi
+
+  local pkg=xsel
+  [ -n "$WAYLAND_DISPLAY" ] && pkg=wl-clipboard
+  if command -v apt >/dev/null 2>&1 && sudo -v; then
+    install_apt_packages $pkg
+    return
+  fi
+  if [ "$pkg" != xsel ]; then
+    echo "-INSTALL $pkg YOURSELF-"
+    return
+  fi
+
+  echo 'No apt/sudo: building xsel from source (needs gcc and libX11 headers)'
+  local xsel=$LIBS/xsel
+  (
+    cd $TMP &&
+    curl -fsSL -o xsel.tar.gz https://github.com/kfish/xsel/archive/refs/tags/1.2.1.tar.gz &&
+    rm -rf xsel-1.2.1 && tar -xf xsel.tar.gz &&
+    rm -rf $xsel && mv xsel-1.2.1 $xsel &&
+    gcc -O2 -DVERSION='"1.2.1"' -o $xsel/xsel $xsel/xsel.c -lX11
+  ) && symlink $xsel/xsel $BIN/xsel
 }
 
 install_asdf() {
@@ -519,6 +554,7 @@ main() {
   options+=('sshd:      Setup SSH/mosh server')
   options+=('setupall:  Setup all files')
   options+=('git:       Add a git profile for a host')
+  options+=('clip:      Install clipboard tool (xsel / wl-clipboard)')
   options+=('')
   options+=('py:        Install python')
   options+=('js:        Install js/node')
@@ -546,6 +582,7 @@ main() {
     sshd) install_ssh_mosh_server ;;
     setupall) setup_all_files ;;
     git) add_git_profile ;;
+    clip) install_clipboard ;;
 
     py) install_python ;;
     js) install_js ;;

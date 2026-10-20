@@ -11,6 +11,7 @@ set smartindent
 set number
 " set cursorline
 set clipboard^=unnamedplus
+lua require('config.clipboard')
 
 lua require('plugins')
 

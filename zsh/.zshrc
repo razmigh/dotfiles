@@ -29,6 +29,12 @@ alias ers="mix ecto.reset && mix ecto.seed"
 
 alias tks="tmux kill-server"
 
+# clipboard: same scripts as tmux/nvim (overrides oh-my-zsh's clipcopy/clippaste)
+if [ -x ~/.local/bin/clip-copy ]; then
+  clipcopy() { ~/.local/bin/clip-copy "$@"; }
+  clippaste() { ~/.local/bin/clip-paste; }
+fi
+
 # for fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
