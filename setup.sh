@@ -132,8 +132,13 @@ install_dev() {
   #asdf set -u direnv latest
 
   echo "-Install fzf-"
-  git clone --depth 1 https://github.com/junegunn/fzf.git $LIBS/fzf
-  $LIBS/fzf/install
+  if [ -d $LIBS/fzf ]; then
+    git -C $LIBS/fzf pull --ff-only
+  else
+    git clone --depth 1 https://github.com/junegunn/fzf.git $LIBS/fzf
+  fi
+  # --bin: shell integration is sourced from .zshrc, so don't generate ~/.fzf.zsh
+  $LIBS/fzf/install --bin
 
   _setup_dev_files
 

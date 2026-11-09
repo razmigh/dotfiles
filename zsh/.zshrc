@@ -35,8 +35,11 @@ if [ -x ~/.local/bin/clip-copy ]; then
   clippaste() { ~/.local/bin/clip-paste; }
 fi
 
-# for fzf
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# for fzf (binary and key bindings from the same clone; re-run setup.sh dev to update)
+if [ -d ~/.local/install/libs/fzf ]; then
+  export PATH="$HOME/.local/install/libs/fzf/bin:$PATH"
+  source ~/.local/install/libs/fzf/shell/key-bindings.zsh
+fi
 
 # for p10k - To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
