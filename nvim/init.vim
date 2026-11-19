@@ -18,8 +18,9 @@ lua require('plugins')
 " Color scheme
 set termguicolors
 
-packadd! nvim-base16
-colorscheme base16-onedark
+" silent: not installed yet on the first PackerSync
+silent! packadd! nvim-base16
+silent! colorscheme base16-onedark
 
 " File Navigation
 nnoremap <Tab> :bnext<CR>

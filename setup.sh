@@ -426,10 +426,14 @@ install_nvim() {
   [ -d $packer ] || git clone --depth 1 https://github.com/wbthomason/packer.nvim $packer
 
   echo "-Run PackerSync-"
-  nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+  nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'; echo
 
   echo "-Run TSUpdate-"
-  nvim --headless -c 'TSUpdate' -c q
+  if has cc || has gcc || has clang || has zig; then
+    nvim --headless -c 'TSUpdate' -c q; echo
+  else
+    echo "[skip] no C compiler for treesitter parsers (install gcc, then :TSUpdate)"
+  fi
 }
 
 # Official prebuilt release on Linux; built from source in ~/.local if it can't run here (old glibc).
