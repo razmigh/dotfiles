@@ -15,6 +15,9 @@ LIBS=$INSTALLS/libs
 TMP=$INSTALLS/.raztmp
 
 BIN=~/.local/bin
+
+# -u: also upgrade tools that are already installed (otherwise they are skipped)
+UPGRADE=0
 FONTS_FOLDER=~/.local/share/fonts
 [ "$OS" = "$OS_MAC" ] && FONTS_FOLDER=~/Library/Fonts
 
@@ -47,14 +50,60 @@ ensure_brew() {
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 }
 
-# Install packages with brew (macOS) or apt/dnf/yum (Linux, needs root). Returns 1 when skipped.
+# Command provided by a package, to tell whether it is already installed.
+pkg_cmd() {
+  case "$1" in
+    build-essential) echo gcc ;;
+    procps) echo ps ;;
+    ripgrep) echo rg ;;
+    neovim) echo nvim ;;
+    gnupg) echo gpg ;;
+    golang) echo go ;;
+    inotify-tools) echo inotifywait ;;
+    wl-clipboard) echo wl-copy ;;
+    ssh) echo sshd ;;
+    tree-sitter-cli) echo tree-sitter ;;
+    *) echo "$1" ;;
+  esac
+}
+
+# 0 when command $1 should be installed: it is missing, or -u was given.
+need_cmd() {
+  has "$1" || return 0
+  [ $UPGRADE = 1 ] && return 0
+  echo "$1 already installed ($(command -v "$1")), skipping (-u to upgrade)"
+  return 1
+}
+
+is_local() { case "$(command -v "$1")" in $BIN/*) return 0 ;; esac; return 1; }
+
+# How to install/upgrade a tool we can also download into ~/.local: skip, pkg or local.
+# A system copy is only upgraded through its package manager, never shadowed by a download.
+# $2=local: download even when root is available (newer than distro packages).
+install_method() {
+  if ! need_cmd "$1" >&2; then echo skip
+  elif is_local "$1"; then echo local
+  elif has "$1" || [ "$OS" = "$OS_MAC" ]; then echo pkg
+  elif [ "$2" != local ] && can_sudo; then echo pkg
+  else echo local
+  fi
+}
+
+# Install packages with brew (macOS) or apt/dnf/yum (Linux, needs root); already installed ones
+# are skipped unless -u. Returns 1 when skipped for lack of root.
 pkg_install() {
+  local pkgs=() pkg
+  for pkg in "$@"; do
+    need_cmd "$(pkg_cmd $pkg)" && pkgs+=("$pkg")
+  done
+  [ ${#pkgs[@]} = 0 ] && return 0
+
   if [ "$OS" = "$OS_MAC" ]; then
-    ensure_brew && brew install "$@"
+    ensure_brew && brew install "${pkgs[@]}"
     return
   fi
   if ! can_sudo; then
-    echo "[skip] no root, install yourself if needed: $*"
+    echo "[skip] no root, install yourself if needed: ${pkgs[*]}"
     return 1
   fi
   local sudo=sudo pm
@@ -62,11 +111,29 @@ pkg_install() {
   for pm in apt-get dnf yum; do
     has $pm && break
   done
-  has $pm || { echo "[skip] no apt/dnf/yum, install yourself: $*"; return 1; }
-  local pkg
-  for pkg in "$@"; do
-    $sudo $pm install -y "$pkg"
+  has $pm || { echo "[skip] no apt/dnf/yum, install yourself: ${pkgs[*]}"; return 1; }
+  for pkg in "${pkgs[@]}"; do
+    # apt-get install upgrades an installed package, dnf/yum need upgrade
+    if [ $pm != apt-get ] && has "$(pkg_cmd $pkg)"; then
+      $sudo $pm upgrade -y "$pkg"
+    else
+      $sudo $pm install -y "$pkg"
+    fi
   done
+}
+
+# Clone a repo if missing, pull it with -u. Returns 1 when skipped.
+git_get() {
+  local url=$1 dir=$2
+  shift 2
+  if ! [ -d "$dir" ]; then
+    git clone "$@" "$url" "$dir"
+  elif [ $UPGRADE = 1 ]; then
+    git -C "$dir" pull --ff-only
+  else
+    echo "$(basename "$dir") already installed, skipping (-u to upgrade)"
+    return 1
+  fi
 }
 
 # Latest release tag of a GitHub repo (follows the redirect, no rate-limited API call).
@@ -91,14 +158,12 @@ install_zsh() {
   echo '--Set up ZSH--'
 
   echo '-Install zsh-'
-  if ! has zsh && ! [ -x $BIN/zsh ]; then
-    if [ "$OS" = "$OS_MAC" ] || can_sudo; then
-      pkg_install zsh
-    else
-      # static build (romkatv/zsh-bin) in ~/.local, no root needed
-      sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)" -- -q -d ~/.local -e no
-    fi
-  fi
+  local method=$(install_method zsh)
+  # fall back to a download only when there is no zsh at all
+  [ "$method" = pkg ] && { pkg_install zsh || has zsh || method=local; }
+  # static build (romkatv/zsh-bin) in ~/.local, no root needed
+  [ "$method" = local ] &&
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)" -- -q -d ~/.local -e no
   # nvim's init.vim uses ~/.local/bin/zsh as its shell
   [ -e $BIN/zsh ] || symlink "$(command -v zsh)" $BIN/zsh
   local zsh_path=$(command -v zsh || echo $BIN/zsh)
@@ -118,28 +183,25 @@ install_zsh() {
   fi
 
   echo '-Install oh-my-zsh-'
-  if [ -d ~/.oh-my-zsh ]; then
-    git -C ~/.oh-my-zsh pull --ff-only
-  else
+  if ! [ -d ~/.oh-my-zsh ]; then
     KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+  else
+    git_get https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
   fi
 
   echo '-Download fonts for powerlevel10k-'
   mkdir -pv $FONTS_FOLDER
   local font
   for font in Regular Bold Italic 'Bold Italic'; do
+    [ -f "$FONTS_FOLDER/MesloLGS NF $font.ttf" ] && [ $UPGRADE = 0 ] && continue
     curl -fsSL -o "$FONTS_FOLDER/MesloLGS NF $font.ttf" \
       "https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20${font// /%20}.ttf"
   done
   has fc-cache && fc-cache -f $FONTS_FOLDER
 
   echo '-Download powerlevel10k-'
-  local p10k=${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
-  if [ -d $p10k ]; then
-    git -C $p10k pull --ff-only
-  else
-    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $p10k
-  fi
+  git_get https://github.com/romkatv/powerlevel10k.git \
+    ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k --depth=1
 
   install_fzf
 
@@ -148,13 +210,11 @@ install_zsh() {
 
 install_fzf() {
   echo "-Install fzf-"
-  if [ -d $LIBS/fzf ]; then
-    git -C $LIBS/fzf pull --ff-only
-  else
-    git clone --depth 1 https://github.com/junegunn/fzf.git $LIBS/fzf
+  # .zshrc uses this clone's binary and key bindings, so a system fzf doesn't count
+  if git_get https://github.com/junegunn/fzf.git $LIBS/fzf --depth 1 || ! [ -x $LIBS/fzf/bin/fzf ]; then
+    # --bin: only fetch the binary; .zshrc sources the shell integration from this clone
+    $LIBS/fzf/install --bin
   fi
-  # --bin: only fetch the binary; .zshrc sources the shell integration from this clone
-  $LIBS/fzf/install --bin
 }
 
 _setup_zsh_files () {
@@ -170,13 +230,30 @@ _setup_zsh_files () {
 install_dev() {
   echo "-Install Packages-"
   [ "$OS" = "$OS_LINUX" ] && pkg_install build-essential procps curl file git
-  pkg_install direnv mosh tmux tmuxp tree
-  if ! has direnv; then
-    echo '-Install direnv in ~/.local/bin-'
-    curl -fsSL https://direnv.net/install.sh | bin_path=$BIN bash
-  fi
+  pkg_install mosh tmux tmuxp tree
 
+  echo '-Install direnv-'
+  local method=$(install_method direnv)
+  [ "$method" = pkg ] && { pkg_install direnv || has direnv || method=local; }
+  [ "$method" = local ] && curl -fsSL https://direnv.net/install.sh | bin_path=$BIN bash
+
+  install_go
+
+  install_asdf
+
+  install_clipboard
+
+  _setup_dev_files
+
+  echo -e "\nInstall docker yourself: https://docs.docker.com/engine/install/"
+}
+
+install_go() {
   echo '-Install go-'
+  case "$(install_method go local)" in
+    skip) return ;;
+    pkg) pkg_install golang; return ;;
+  esac
   local go=$LIBS/go
   local go_os=$(echo "$OS" | tr '[:upper:]' '[:lower:]')
   local go_arch=amd64
@@ -188,14 +265,6 @@ install_dev() {
     rm -rf go && tar -xzf go.tar.gz &&
     rm -rf $go && mv go $go
   ) && symlink $go/bin/go $BIN/go
-
-  install_asdf
-
-  install_clipboard
-
-  _setup_dev_files
-
-  echo -e "\nInstall docker yourself: https://docs.docker.com/engine/install/"
 }
 
 _setup_dev_files() {
@@ -288,7 +357,12 @@ install_clipboard() {
 
   local pkg=xsel
   [ -n "$WAYLAND_DISPLAY" ] && pkg=wl-clipboard
-  if can_sudo; then
+  if [ $UPGRADE = 0 ] && { has xsel || has xclip || has wl-copy; }; then
+    echo 'Clipboard tool already installed, skipping (-u to upgrade)'
+    return
+  fi
+  local method=$(install_method $(pkg_cmd $pkg))
+  if [ "$method" = pkg ]; then
     pkg_install $pkg
     return
   fi
@@ -311,6 +385,10 @@ install_clipboard() {
 # Prebuilt asdf (v0.16+ is a single Go binary).
 install_asdf() {
   echo "-Install asdf-"
+  case "$(install_method asdf local)" in
+    skip) return ;;
+    pkg) pkg_install asdf; return ;;
+  esac
   local asdf_dir=$LIBS/asdf
   local os=$(echo "$OS" | tr '[:upper:]' '[:lower:]')
   local arch=amd64
@@ -333,62 +411,19 @@ npm_global() {
 
 install_nvim() {
   echo "--Install Neovim--"
-  if [ "$OS" = "$OS_MAC" ]; then
-    pkg_install neovim
-  else
-    # official prebuilt release; build from source in ~/.local if it can't run here (old glibc)
-    local nvim=$LIBS/nvim
-    local name=nvim-linux-$(release_arch)
-    (
-      cd $TMP &&
-      curl -fL -o nvim.tar.gz https://github.com/neovim/neovim/releases/latest/download/$name.tar.gz &&
-      rm -rf $name && tar -xzf nvim.tar.gz &&
-      rm -rf $nvim && mv $name $nvim
-    )
-    if ! $nvim/bin/nvim --version >/dev/null 2>&1; then
-      echo '-Prebuilt nvim failed, building from source (needs cmake, gettext, gcc)-'
-      local src=$LIBS/neovim
-      rm -rf $src $nvim &&
-      git clone --depth 1 --branch stable https://github.com/neovim/neovim $src &&
-      make -C $src CMAKE_BUILD_TYPE=Release CMAKE_INSTALL_PREFIX=$nvim install
-    fi
-    symlink $nvim/bin/nvim $BIN/nvim
-  fi
+  install_nvim_bin
 
   install_ripgrep
 
   _setup_nvim_files
 
-  echo '-Install tree-sitter-cli for latex-'
-  if [ "$OS" = "$OS_MAC" ]; then
-    pkg_install tree-sitter-cli
-  else
-    local ts_arch=x64
-    [ "$(release_arch)" = arm64 ] && ts_arch=arm64
-    local cargo=$(command -v cargo || echo ~/.cargo/bin/cargo)
-    # latest first, then v0.25.10 (last release built against an older glibc, e.g. RHEL 9)
-    local ts_url ts_ok=0
-    for ts_url in latest/download download/v0.25.10; do
-      curl -fL https://github.com/tree-sitter/tree-sitter/releases/$ts_url/tree-sitter-linux-$ts_arch.gz |
-        gunzip > $TMP/tree-sitter && chmod +x $TMP/tree-sitter &&
-        $TMP/tree-sitter --version >/dev/null 2>&1 && ts_ok=1 && break
-    done
-    if [ $ts_ok = 1 ]; then
-      mv -f $TMP/tree-sitter $BIN/tree-sitter
-    elif [ -x "$cargo" ]; then
-      echo '-Prebuilt tree-sitter needs a newer glibc, building it with cargo-'
-      $cargo install --locked --root ~/.local tree-sitter-cli
-    else
-      echo '[skip] prebuilt tree-sitter needs a newer glibc; install rust (cargo) and rerun for latex'
-    fi
-    rm -f $TMP/tree-sitter
-  fi
+  install_tree_sitter
 
   echo "-Install Packer-"
   rm -f ~/.config/nvim/plugin/packer_compiled.lua
   local packer=~/.local/share/nvim/site/pack/packer/start/packer.nvim
-  rm -rf $packer
-  git clone --depth 1 https://github.com/wbthomason/packer.nvim $packer
+  # packer updates itself during PackerSync
+  [ -d $packer ] || git clone --depth 1 https://github.com/wbthomason/packer.nvim $packer
 
   echo "-Run PackerSync-"
   nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
@@ -397,13 +432,65 @@ install_nvim() {
   nvim --headless -c 'TSUpdate' -c q
 }
 
+# Official prebuilt release on Linux; built from source in ~/.local if it can't run here (old glibc).
+install_nvim_bin() {
+  case "$(install_method nvim local)" in
+    skip) return ;;
+    pkg) pkg_install neovim; return ;;
+  esac
+  local nvim=$LIBS/nvim
+  local name=nvim-linux-$(release_arch)
+  (
+    cd $TMP &&
+    curl -fL -o nvim.tar.gz https://github.com/neovim/neovim/releases/latest/download/$name.tar.gz &&
+    rm -rf $name && tar -xzf nvim.tar.gz &&
+    rm -rf $nvim && mv $name $nvim
+  )
+  if ! $nvim/bin/nvim --version >/dev/null 2>&1; then
+    echo '-Prebuilt nvim failed, building from source (needs cmake, gettext, gcc)-'
+    local src=$LIBS/neovim
+    rm -rf $src $nvim &&
+    git clone --depth 1 --branch stable https://github.com/neovim/neovim $src &&
+    make -C $src CMAKE_BUILD_TYPE=Release CMAKE_INSTALL_PREFIX=$nvim install
+  fi
+  symlink $nvim/bin/nvim $BIN/nvim
+}
+
+install_tree_sitter() {
+  echo '-Install tree-sitter-cli for latex-'
+  case "$(install_method tree-sitter local)" in
+    skip) return ;;
+    pkg) pkg_install tree-sitter-cli; return ;;
+  esac
+  local ts_arch=x64
+  [ "$(release_arch)" = arm64 ] && ts_arch=arm64
+  local cargo=$(command -v cargo || echo ~/.cargo/bin/cargo)
+  # latest first, then v0.25.10 (last release built against an older glibc, e.g. RHEL 9)
+  local ts_url ts_ok=0
+  for ts_url in latest/download download/v0.25.10; do
+    curl -fL https://github.com/tree-sitter/tree-sitter/releases/$ts_url/tree-sitter-linux-$ts_arch.gz |
+      gunzip > $TMP/tree-sitter && chmod +x $TMP/tree-sitter &&
+      $TMP/tree-sitter --version >/dev/null 2>&1 && ts_ok=1 && break
+  done
+  if [ $ts_ok = 1 ]; then
+    mv -f $TMP/tree-sitter $BIN/tree-sitter
+  elif [ -x "$cargo" ]; then
+    echo '-Prebuilt tree-sitter needs a newer glibc, building it with cargo-'
+    $cargo install --locked --root ~/.local tree-sitter-cli
+  else
+    echo '[skip] prebuilt tree-sitter needs a newer glibc; install rust (cargo) and rerun for latex'
+  fi
+  rm -f $TMP/tree-sitter
+}
+
 # ripgrep is used by telescope; static musl build on Linux when there is no root
 install_ripgrep() {
   echo "-Install ripgrep-"
-  has rg && { echo "Already installed: $(command -v rg)"; return; }
-  if [ "$OS" = "$OS_MAC" ] || can_sudo; then
-    pkg_install ripgrep && return
-  fi
+  case "$(install_method rg)" in
+    skip) return ;;
+    # download only when there is no rg at all (and the release assets below are for Linux)
+    pkg) pkg_install ripgrep || has rg || [ "$OS" = "$OS_MAC" ] && return ;;
+  esac
   local target=x86_64-unknown-linux-musl
   [ "$(release_arch)" = arm64 ] && target=aarch64-unknown-linux-gnu
   local tag=$(gh_latest_tag BurntSushi/ripgrep)
@@ -493,6 +580,7 @@ install_elixir() {
   #symlink "${bin_path}/language_server.sh" "/usr/local/bin/elixir-ls" &&
   #  echo 'elixir-ls installed!'
 
+  need_cmd elixir-ls || return 0
   local elixirls_path="${LANGUAGE_SERVERS}/elixir-ls"
   rm -rf $elixirls_path && mkdir -pv $elixirls_path
   cd $LANGUAGE_SERVERS && (
@@ -519,7 +607,7 @@ install_ssh_key() {
 install_gpg_key() {
   echo "Setting up GPG key"
   echo "Install gpg tooling"
-  has gpg || pkg_install gnupg || return 1
+  pkg_install gnupg || has gpg || return 1
 
   echo "Generate key. (default-RSA & RSA, 4096, default-0)"
   gpg --full-generate-key
@@ -532,17 +620,24 @@ install_gpg_key() {
 }
 
 install_cpp() {
-  has cmake || pkg_install cmake
+  pkg_install cmake
 
   # llvm
   # run build a few times if it fails... try with different -j 8
   local llvm=$LIBS/llvm-project
-  rm -rf $llvm
-  git clone https://github.com/llvm/llvm-project.git $llvm
-  mkdir -p $llvm/build
-  cd $llvm/build
-  cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DCMAKE_INSTALL_PREFIX=$LIBS/llvm -DCMAKE_BUILD_TYPE=Release ../llvm
-  make -j 16
+  if [ -x $llvm/build/bin/clang ] && [ $UPGRADE = 0 ]; then
+    echo "llvm already built ($llvm), skipping (-u to upgrade)"
+  else
+    if [ -d $llvm ]; then
+      git -C $llvm pull --ff-only
+    else
+      git clone https://github.com/llvm/llvm-project.git $llvm
+    fi
+    mkdir -p $llvm/build
+    cd $llvm/build
+    cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DCMAKE_INSTALL_PREFIX=$LIBS/llvm -DCMAKE_BUILD_TYPE=Release ../llvm
+    make -j 16
+  fi
 
   # ccls
   #
@@ -556,13 +651,15 @@ install_cpp() {
   # cp $llvm/build/lib/cmake/clang/ClangConfig.cmake $llvm/build/bin/
 
   local ccls=$LIBS/ccls
-  rm -rf $ccls
-  git clone --depth=1 --recursive https://github.com/MaskRay/ccls $ccls
-  cd $ccls
-  cmake -H. -BRelease -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$llvm/build/bin
-  cmake --build Release
-  symlink $ccls/Release/ccls $BIN/ccls
-  
+  if need_cmd ccls; then
+    rm -rf $ccls
+    git clone --depth=1 --recursive https://github.com/MaskRay/ccls $ccls
+    cd $ccls
+    cmake -H. -BRelease -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$llvm/build/bin
+    cmake --build Release
+    symlink $ccls/Release/ccls $BIN/ccls
+  fi
+
   _setup_cpp_files
 }
 
@@ -574,12 +671,15 @@ _setup_cpp_files() {
 install_lua() {
   echo "-Install LuaFormatter-"
   local lua_fmt=$LIBS/LuaFormatter
-  git clone --recurse-submodules https://github.com/Koihik/LuaFormatter.git $lua_fmt
-  cd $lua_fmt && {
-    cmake .
-    make
-    cd -
-  }
+  if need_cmd lua-format; then
+    rm -rf $lua_fmt
+    git clone --recurse-submodules https://github.com/Koihik/LuaFormatter.git $lua_fmt
+    cd $lua_fmt && {
+      cmake .
+      make
+      cd -
+    }
+  fi
 
   _setup_lua_files
 }
@@ -693,32 +793,46 @@ setup_all_files() {
 }
 
 main() {
+  local opt
+  while getopts u opt; do
+    case $opt in
+      u) UPGRADE=1 ;;
+      *) echo "Usage: $0 [-u]  (-u: also upgrade already installed tools)"; exit 1 ;;
+    esac
+  done
+
   clear
   echo 'OS:' "$OS $KERNEL ($ARCH)"
   can_sudo >/dev/null 2>&1 || echo 'No root/sudo: installing into ~/.local'
+  if [ $UPGRADE = 1 ]; then
+    echo 'Upgrade mode: installed tools are upgraded'
+  else
+    echo 'Installed tools are skipped (-u to upgrade)'
+  fi
   echo
 
   local options=()
-  options+=('zsh:       Install zsh, oh-my-zsh, p10k, fzf')
-  options+=('fzf:       Install/update fzf')
-  options+=('nvim:      Install neovim, ripgrep, tree-sitter')
-  options+=('claude:    Set up Claude Code status line')
-  options+=('dev:       Install base dev')
-  options+=('asdf:      Install asdf')
+  options+=('zsh:       zsh, oh-my-zsh, p10k, fzf')
+  options+=('dev:       go, asdf, direnv, tmux, git config')
+  options+=('fzf:       fzf + key bindings')
+  options+=('nvim:      neovim, ripgrep, plugins')
+  options+=('ssh:       new SSH key')
+  options+=('git:       git identity for a host')
+  options+=('clip:      clipboard tool (xsel)')
+  options+=('setupall:  re-link config files only')
   options+=('')
-  options+=('ssh:       Install SSH key')
-  options+=('gpg:       Install GPG key')
-  options+=('sshd:      Setup SSH/mosh server')
-  options+=('setupall:  Setup all files')
-  options+=('git:       Add a git profile for a host')
-  options+=('clip:      Install clipboard tool (xsel / wl-clipboard)')
+  options+=('claude:    Claude Code status line')
+  options+=('asdf:      asdf version manager')
+  options+=('gpg:       new GPG key')
   options+=('')
-  options+=('py:        Install python')
-  options+=('js:        Install js/node')
-  options+=('ex:        Install elixir')
-  options+=('cpp:       Install C++')
-  options+=('lua:       Install lua')
-  options+=('sh:        Install bash')
+  options+=('js:        node + LSPs, prettierd')
+  options+=('py:        python + LSP')
+  options+=('cpp:       llvm/clang, ccls')
+  options+=('ex:        elixir, erlang, elixir-ls')
+  options+=('lua:       lua-format')
+  options+=('sh:        beautysh formatter')
+  options+=('')
+  options+=('sshd:      SSH/mosh server (root)')
 
   echo 'Select one of the following options:'
   for i in "${!options[@]}"; do
@@ -730,25 +844,26 @@ main() {
   read -r response
   case "$response" in
     zsh) install_zsh ;;
+    dev) install_dev ;;
     fzf) install_fzf ;;
     nvim) install_nvim ;;
-    claude) install_claude ;;
-    dev) install_dev ;;
-    asdf) install_asdf ;;
-
     ssh) install_ssh_key ;;
-    gpg) install_gpg_key ;;
-    sshd) install_ssh_mosh_server ;;
-    setupall) setup_all_files ;;
     git) add_git_profile ;;
     clip) install_clipboard ;;
+    setupall) setup_all_files ;;
 
-    py) install_python ;;
+    claude) install_claude ;;
+    asdf) install_asdf ;;
+    gpg) install_gpg_key ;;
+
     js) install_js ;;
-    ex) install_elixir ;;
+    py) install_python ;;
     cpp) install_cpp ;;
+    ex) install_elixir ;;
     lua) install_lua ;;
     sh) install_bash ;;
+
+    sshd) install_ssh_mosh_server ;;
     [Qq]) exit 0 ;;
     *) echo "'${response}' isn't a valid option" ;;
   esac
