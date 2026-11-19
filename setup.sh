@@ -624,47 +624,66 @@ install_gpg_key() {
 }
 
 install_cpp() {
-  pkg_install cmake
-
-  # llvm
-  # run build a few times if it fails... try with different -j 8
-  local llvm=$LIBS/llvm-project
-  if [ -x $llvm/build/bin/clang ] && [ $UPGRADE = 0 ]; then
-    echo "llvm already built ($llvm), skipping (-u to upgrade)"
+  if [ "$OS" = "$OS_MAC" ]; then
+    pkg_install cmake llvm ccls
   else
-    if [ -d $llvm ]; then
-      git -C $llvm pull --ff-only
-    else
-      git clone https://github.com/llvm/llvm-project.git $llvm
-    fi
-    mkdir -p $llvm/build
-    cd $llvm/build
-    cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DCMAKE_INSTALL_PREFIX=$LIBS/llvm -DCMAKE_BUILD_TYPE=Release ../llvm
-    make -j 16
+    pkg_install cmake
+    install_llvm && install_ccls
   fi
-
-  # ccls
-  #
-  # IF src/utils.hh:18:20: fatal error: optional: No such file or director
-  # missing optional header files, install gcc 7 or newer
-  #
-  # IF /usr/bin/ld: cannot find -ltinfo
-  # sudo apt install libtinfo-dev
-  #
-  # IF can't find ClangConfig.cmake
-  # cp $llvm/build/lib/cmake/clang/ClangConfig.cmake $llvm/build/bin/
-
-  local ccls=$LIBS/ccls
-  if need_cmd ccls; then
-    rm -rf $ccls
-    git clone --depth=1 --recursive https://github.com/MaskRay/ccls $ccls
-    cd $ccls
-    cmake -H. -BRelease -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$llvm/build/bin
-    cmake --build Release
-    symlink $ccls/Release/ccls $BIN/ccls
-  fi
-
   _setup_cpp_files
+}
+
+# Prebuilt llvm release (clang, clangd, clang-format + cmake files for ccls) in ~/.local;
+# builds the release source there instead if the prebuilt can't run here (old glibc).
+install_llvm() {
+  echo '-Install llvm-'
+  local llvm=$LIBS/llvm
+  if [ -x $llvm/bin/clang ] && [ $UPGRADE = 0 ]; then
+    echo "llvm already installed ($llvm), skipping (-u to upgrade)"
+    return
+  fi
+  local tag=$(gh_latest_tag llvm/llvm-project)
+  local ver=${tag#llvmorg-} url=https://github.com/llvm/llvm-project/releases/download/$tag
+  local arch=X64 new=$llvm.new src=$LIBS/llvm-src
+  [ "$(release_arch)" = arm64 ] && arch=ARM64
+
+  rm -rf $new && mkdir -p $new
+  if ! { llvm_prebuilt_ok && curl -fL $url/LLVM-$ver-Linux-$arch.tar.xz | tar -xJ --strip-components=1 -C $new &&
+         $new/bin/clang --version >/dev/null 2>&1; }; then
+    echo "prebuilt llvm $ver can't run here, building it from source (takes a while)"
+    rm -rf $new $src && mkdir -p $src
+    curl -fL $url/llvm-project-$ver.src.tar.xz | tar -xJ --strip-components=1 -C $src &&
+    cmake -S $src/llvm -B $src/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$new \
+      -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" &&
+    cmake --build $src/build -j "$(nproc)" && cmake --install $src/build || return 1
+    rm -rf $src
+  fi
+  rm -rf $llvm && mv $new $llvm
+
+  # never shadow a system copy
+  local b
+  for b in clang clang++ clangd clang-format; do
+    has $b && ! is_local $b || symlink $llvm/bin/$b $BIN/$b
+  done
+}
+
+# Release binaries need gcc 12+ libstdc++ (GLIBCXX_3.4.30, e.g. not RHEL 9): saves a 2GB download.
+llvm_prebuilt_ok() {
+  local so=$(ldconfig -p 2>/dev/null | grep -E 'libstdc\+\+\.so\.6 .*(x86-64|AArch64)' | sed 's/.*=> //' | head -1)
+  [ -z "$so" ] || grep -qa GLIBCXX_3.4.30 "$so"
+}
+
+# IF src/utils.hh: fatal error: optional: No such file -> needs gcc 7 or newer
+# IF /usr/bin/ld: cannot find -ltinfo -> install libtinfo-dev / ncurses-devel
+install_ccls() {
+  echo '-Install ccls-'
+  need_cmd ccls || return 0
+  local ccls=$LIBS/ccls
+  rm -rf $ccls
+  git clone --depth=1 --recursive https://github.com/MaskRay/ccls $ccls &&
+  cmake -S $ccls -B $ccls/Release -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$LIBS/llvm &&
+  cmake --build $ccls/Release -j "$(nproc)" &&
+  symlink $ccls/Release/ccls $BIN/ccls
 }
 
 _setup_cpp_files() {
