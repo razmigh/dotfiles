@@ -56,8 +56,13 @@ export PATH="$PATH:$HOME/go/bin"
 # for tmuxp
 export DISABLE_AUTO_TITLE='true'
 
-# for mosh
-export LANG=en_US.UTF-8 LC_CTYPE=en_US.UTF-8
+# UTF-8 locale for mosh; use an installed one (minimal containers lack en_US, perl/fzf then warn)
+() {
+  local l avail=(${(f)"$(locale -a 2>/dev/null)"})
+  for l in en_US.utf8 en_US.UTF-8 C.utf8 C.UTF-8 ${(M)avail:#*.(utf8|UTF-8)} C; do
+    (( ${avail[(Ie)$l]} )) && { export LANG=$l LC_CTYPE=$l; return }
+  done
+}
 
 # for direnv
 command -v direnv >/dev/null && eval "$(direnv hook zsh)"
