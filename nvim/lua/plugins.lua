@@ -20,6 +20,7 @@ return require('packer').startup(function()
 
     use {
         'nvim-treesitter/nvim-treesitter',
+        branch = 'master', -- config.treesitter uses the master API (main is a rewrite without nvim-treesitter.configs)
         event = "BufEnter",
         run = ':TSUpdate',
         config = [[require('config.treesitter')]]

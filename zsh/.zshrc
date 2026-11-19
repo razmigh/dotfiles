@@ -44,14 +44,11 @@ fi
 # for p10k - To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
+# user installs (setup.sh puts everything here when there is no root) win over system ones
+export PATH="$HOME/.local/bin:$PATH"
+
 # for asdf
-#export ASDF_DATA_DIR="$HOME/.asdf"
-export PATH="$ASDF_DATA_DIR/shims:$PATH"
-#. $HOME/.asdf/asdf.sh
-#ASDF_PATH=`brew --prefix asdf`
-#. "$ASDF_PATH/libexec/asdf.sh"
-#
-export PATH="$PATH:$HOME/.local/bin"
+export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
 
 # for GO
 export PATH="$PATH:$HOME/go/bin"
@@ -63,7 +60,7 @@ export DISABLE_AUTO_TITLE='true'
 export LANG=en_US.UTF-8 LC_CTYPE=en_US.UTF-8
 
 # for direnv
-eval "$(direnv hook zsh)"
+command -v direnv >/dev/null && eval "$(direnv hook zsh)"
 
 # clean duplicates in path
 export PATH=$(echo "$PATH" | awk -v RS=':' -v ORS=":" '!a[$1]++{if (NR > 1) printf ORS; printf $a[$1]}')
