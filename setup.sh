@@ -142,6 +142,16 @@ gh_latest_tag() {
   curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$1/releases/latest" | sed 's#.*/##'
 }
 
+# Install the single binary $2 from the release zip at $1 into ~/.local/bin (python3 if no unzip).
+zip_bin() {
+  curl -fL -o $TMP/$2.zip "$1" &&
+  { unzip -oq $TMP/$2.zip $2 -d $TMP 2>/dev/null || python3 -m zipfile -e $TMP/$2.zip $TMP; } &&
+  chmod +x $TMP/$2 && mv -f $TMP/$2 $BIN/$2
+  local rc=$?
+  rm -f $TMP/$2.zip
+  return $rc
+}
+
 # arch naming used by most release assets: x86_64 or arm64
 release_arch() {
   case "$ARCH" in
@@ -564,12 +574,17 @@ install_elixir() {
   echo "-Install asdf packages-"
   asdf plugin add erlang
   asdf plugin add elixir
+  # newest elixir build, then the newest erlang of the OTP release it was built for
+  local elixir=$(asdf list all elixir | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-otp-[0-9]+$' | sort -V | tail -1)
+  local erlang=$(asdf list all erlang | grep -E "^${elixir##*-otp-}(\.[0-9]+)*$" | sort -V | tail -1)
+  [ -n "$elixir" ] && [ -n "$erlang" ] || { echo '[skip] could not list erlang/elixir versions'; return 1; }
+  echo "erlang $erlang, elixir $elixir"
 
-  KERL_BUILD_DOCS=yes asdf install erlang latest
-  asdf install elixir latest
+  KERL_BUILD_DOCS=yes asdf install erlang $erlang
+  asdf install elixir $elixir
 
-  asdf set -u erlang 27.3.4
-  asdf set -u elixir 1.18.3-otp-27
+  asdf set -u erlang $erlang
+  asdf set -u elixir $elixir
 
   echo "-Install Elixir LS-"
 
@@ -586,14 +601,15 @@ install_elixir() {
   #  echo 'elixir-ls installed!'
 
   need_cmd elixir-ls || return 0
-  local elixirls_path="${LANGUAGE_SERVERS}/elixir-ls"
+  local tag=$(gh_latest_tag elixir-lsp/elixir-ls)
+  local elixirls_path=$LANGUAGE_SERVERS/elixir-ls zip=$TMP/elixir-ls.zip
   rm -rf $elixirls_path && mkdir -pv $elixirls_path
-  cd $LANGUAGE_SERVERS && (
-    curl -fLO https://github.com/elixir-lsp/elixir-ls/releases/download/v0.27.2/elixir-ls-v0.27.2.zip -C -
-    unzip -o elixir-ls-v0.27.2.zip -d ./elixir-ls
-    cd -
-  ) && symlink "${elixirls_path}/language_server.sh" "$BIN/elixir-ls" &&
-  echo 'elixir-ls installed!'
+  curl -fL -o $zip https://github.com/elixir-lsp/elixir-ls/releases/download/$tag/elixir-ls-$tag.zip &&
+  { unzip -oq $zip -d $elixirls_path 2>/dev/null || python3 -m zipfile -e $zip $elixirls_path; } &&
+  chmod +x $elixirls_path/*.sh &&
+  symlink $elixirls_path/language_server.sh $BIN/elixir-ls &&
+  echo "elixir-ls $tag installed!"
+  rm -f $zip
 }
 
 install_ssh_key() {
@@ -667,10 +683,7 @@ install_ninja() {
   esac
   local name=ninja-linux
   [ "$(release_arch)" = arm64 ] && name=ninja-linux-aarch64
-  curl -fL -o $TMP/ninja.zip https://github.com/ninja-build/ninja/releases/latest/download/$name.zip &&
-  { unzip -oq $TMP/ninja.zip -d $TMP 2>/dev/null || python3 -m zipfile -e $TMP/ninja.zip $TMP; } &&
-  chmod +x $TMP/ninja && mv -f $TMP/ninja $BIN/ninja
-  rm -f $TMP/ninja.zip
+  zip_bin https://github.com/ninja-build/ninja/releases/latest/download/$name.zip ninja
 }
 
 # Prebuilt llvm release (clang, clangd, clang-format) in ~/.local;
@@ -718,29 +731,37 @@ _setup_cpp_files() {
   symlink $DOTFILES/cpp/config.yaml $HOME/.config/clangd/config.yaml
 }
 
+# Lua formatter used by none-ls; static musl build, runs anywhere.
 install_lua() {
-  echo "-Install LuaFormatter-"
-  local lua_fmt=$LIBS/LuaFormatter
-  if need_cmd lua-format; then
-    rm -rf $lua_fmt
-    git clone --recurse-submodules https://github.com/Koihik/LuaFormatter.git $lua_fmt
-    cd $lua_fmt && {
-      cmake .
-      make
-      cd -
-    }
-  fi
-
+  echo '-Install stylua-'
+  case "$(install_method stylua local)" in
+    skip) ;;
+    pkg) pkg_install stylua ;;
+    local)
+      local arch=x86_64
+      [ "$(release_arch)" = arm64 ] && arch=aarch64
+      zip_bin https://github.com/JohnnyMorganz/StyLua/releases/latest/download/stylua-linux-$arch-musl.zip stylua
+      ;;
+  esac
   _setup_lua_files
 }
 
 _setup_lua_files() {
-  symlink $LIBS/LuaFormatter/lua-format $BIN/lua-format
+  mkdir -pv $HOME/.config/stylua
+  symlink $DOTFILES/lua/stylua.toml $HOME/.config/stylua/stylua.toml
 }
 
+# Shell formatter used by none-ls; static Go binary.
 install_bash() {
-  echo "-Install beautysh-"
-  pip install setuptools beautysh
+  echo '-Install shfmt-'
+  case "$(install_method shfmt local)" in
+    skip) return ;;
+    pkg) pkg_install shfmt; return ;;
+  esac
+  local tag=$(gh_latest_tag mvdan/sh) arch=amd64
+  [ "$(release_arch)" = arm64 ] && arch=arm64
+  curl -fL -o $TMP/shfmt https://github.com/mvdan/sh/releases/download/$tag/shfmt_${tag}_linux_$arch &&
+  chmod +x $TMP/shfmt && mv -f $TMP/shfmt $BIN/shfmt
 }
 
 # untested
@@ -879,8 +900,8 @@ main() {
   options+=('py:        python + LSP')
   options+=('cpp:       cmake, ninja, llvm/clang')
   options+=('ex:        elixir, erlang, elixir-ls')
-  options+=('lua:       lua-format')
-  options+=('sh:        beautysh formatter')
+  options+=('lua:       stylua formatter')
+  options+=('sh:        shfmt formatter')
   options+=('')
   options+=('sshd:      SSH/mosh server (root)')
 
