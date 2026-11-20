@@ -1,3 +1,16 @@
+# UTF-8 locale, set before p10k (zsh errors "character not in range" without one).
+# Prefer an installed one; otherwise C.UTF-8 still works for zsh-bin, and perl's warning is silenced.
+() {
+  local l avail=(${(f)"$(locale -a 2>/dev/null)"})
+  for l in en_US.utf8 en_US.UTF-8 C.utf8 C.UTF-8 ${(M)avail:#*.(utf8|UTF-8)}; do
+    (( ${avail[(Ie)$l]} )) && { export LANG=$l LC_CTYPE=$l; return }
+  done
+  export LANG=C.UTF-8 LC_CTYPE=C.UTF-8 PERL_BADLANG=0
+}
+
+# user installs (setup.sh puts everything here when there is no root) win over system ones
+export PATH="$HOME/.local/bin:$PATH"
+
 # for GPG
 export GPG_TTY=$(tty)
 
@@ -12,7 +25,8 @@ fi
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 
-plugins=(asdf docker git direnv)
+plugins=(asdf docker git)
+(( $+commands[direnv] )) && plugins+=(direnv)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -44,9 +58,6 @@ fi
 # for p10k - To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# user installs (setup.sh puts everything here when there is no root) win over system ones
-export PATH="$HOME/.local/bin:$PATH"
-
 # for asdf
 export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
 
@@ -59,17 +70,6 @@ export CMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 # for tmuxp
 export DISABLE_AUTO_TITLE='true'
-
-# UTF-8 locale for mosh; use an installed one (minimal containers lack en_US, perl/fzf then warn)
-() {
-  local l avail=(${(f)"$(locale -a 2>/dev/null)"})
-  for l in en_US.utf8 en_US.UTF-8 C.utf8 C.UTF-8 ${(M)avail:#*.(utf8|UTF-8)} C; do
-    (( ${avail[(Ie)$l]} )) && { export LANG=$l LC_CTYPE=$l; return }
-  done
-}
-
-# for direnv
-command -v direnv >/dev/null && eval "$(direnv hook zsh)"
 
 # clean duplicates in path
 export PATH=$(echo "$PATH" | awk -v RS=':' -v ORS=":" '!a[$1]++{if (NR > 1) printf ORS; printf $a[$1]}')
