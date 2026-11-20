@@ -63,6 +63,7 @@ pkg_cmd() {
     wl-clipboard) echo wl-copy ;;
     ssh) echo sshd ;;
     tree-sitter-cli) echo tree-sitter ;;
+    ninja-build) echo ninja ;;
     *) echo "$1" ;;
   esac
 }
@@ -624,47 +625,92 @@ install_gpg_key() {
 }
 
 install_cpp() {
-  pkg_install cmake
-
-  # llvm
-  # run build a few times if it fails... try with different -j 8
-  local llvm=$LIBS/llvm-project
-  if [ -x $llvm/build/bin/clang ] && [ $UPGRADE = 0 ]; then
-    echo "llvm already built ($llvm), skipping (-u to upgrade)"
+  install_cmake
+  install_ninja
+  # cmake picks this up for the llvm source build below
+  has ninja && export CMAKE_GENERATOR=Ninja
+  if [ "$OS" = "$OS_MAC" ]; then
+    pkg_install llvm
   else
-    if [ -d $llvm ]; then
-      git -C $llvm pull --ff-only
-    else
-      git clone https://github.com/llvm/llvm-project.git $llvm
-    fi
-    mkdir -p $llvm/build
-    cd $llvm/build
-    cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DCMAKE_INSTALL_PREFIX=$LIBS/llvm -DCMAKE_BUILD_TYPE=Release ../llvm
-    make -j 16
+    install_llvm
   fi
-
-  # ccls
-  #
-  # IF src/utils.hh:18:20: fatal error: optional: No such file or director
-  # missing optional header files, install gcc 7 or newer
-  #
-  # IF /usr/bin/ld: cannot find -ltinfo
-  # sudo apt install libtinfo-dev
-  #
-  # IF can't find ClangConfig.cmake
-  # cp $llvm/build/lib/cmake/clang/ClangConfig.cmake $llvm/build/bin/
-
-  local ccls=$LIBS/ccls
-  if need_cmd ccls; then
-    rm -rf $ccls
-    git clone --depth=1 --recursive https://github.com/MaskRay/ccls $ccls
-    cd $ccls
-    cmake -H. -BRelease -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$llvm/build/bin
-    cmake --build Release
-    symlink $ccls/Release/ccls $BIN/ccls
-  fi
-
   _setup_cpp_files
+}
+
+# Kitware's prebuilt release (runs on old glibc); distro cmake can be too old for llvm.
+install_cmake() {
+  echo '-Install cmake-'
+  case "$(install_method cmake local)" in
+    skip) return ;;
+    pkg) pkg_install cmake; return ;;
+  esac
+  local tag=$(gh_latest_tag Kitware/CMake) arch=x86_64
+  [ "$(release_arch)" = arm64 ] && arch=aarch64
+  local name=cmake-${tag#v}-linux-$arch cmake=$LIBS/cmake
+  (
+    cd $TMP &&
+    curl -fL https://github.com/Kitware/CMake/releases/download/$tag/$name.tar.gz | tar -xz &&
+    rm -rf $cmake && mv $name $cmake
+  ) || return 1
+  local b
+  for b in cmake ctest cpack; do
+    symlink $cmake/bin/$b $BIN/$b
+  done
+}
+
+# Single static binary from the release.
+install_ninja() {
+  echo '-Install ninja-'
+  case "$(install_method ninja local)" in
+    skip) return ;;
+    pkg) pkg_install "$([ "$OS" = "$OS_MAC" ] && echo ninja || echo ninja-build)"; return ;;
+  esac
+  local name=ninja-linux
+  [ "$(release_arch)" = arm64 ] && name=ninja-linux-aarch64
+  curl -fL -o $TMP/ninja.zip https://github.com/ninja-build/ninja/releases/latest/download/$name.zip &&
+  { unzip -oq $TMP/ninja.zip -d $TMP 2>/dev/null || python3 -m zipfile -e $TMP/ninja.zip $TMP; } &&
+  chmod +x $TMP/ninja && mv -f $TMP/ninja $BIN/ninja
+  rm -f $TMP/ninja.zip
+}
+
+# Prebuilt llvm release (clang, clangd, clang-format) in ~/.local;
+# builds the release source there instead if the prebuilt can't run here (old glibc).
+install_llvm() {
+  echo '-Install llvm-'
+  local llvm=$LIBS/llvm
+  if [ -x $llvm/bin/clang ] && [ $UPGRADE = 0 ]; then
+    echo "llvm already installed ($llvm), skipping (-u to upgrade)"
+    return
+  fi
+  local tag=$(gh_latest_tag llvm/llvm-project)
+  local ver=${tag#llvmorg-} url=https://github.com/llvm/llvm-project/releases/download/$tag
+  local arch=X64 new=$llvm.new src=$LIBS/llvm-src
+  [ "$(release_arch)" = arm64 ] && arch=ARM64
+
+  rm -rf $new && mkdir -p $new
+  if ! { llvm_prebuilt_ok && curl -fL $url/LLVM-$ver-Linux-$arch.tar.xz | tar -xJ --strip-components=1 -C $new &&
+         $new/bin/clang --version >/dev/null 2>&1; }; then
+    echo "prebuilt llvm $ver can't run here, building it from source (takes a while)"
+    rm -rf $new $src && mkdir -p $src
+    curl -fL $url/llvm-project-$ver.src.tar.xz | tar -xJ --strip-components=1 -C $src &&
+    cmake -S $src/llvm -B $src/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$new \
+      -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DLLVM_TARGETS_TO_BUILD=host -DLLVM_PARALLEL_LINK_JOBS=2 &&
+    cmake --build $src/build -j "$(nproc)" && cmake --install $src/build || return 1
+    rm -rf $src
+  fi
+  rm -rf $llvm && mv $new $llvm
+
+  # never shadow a system copy
+  local b
+  for b in clang clang++ clangd clang-format; do
+    has $b && ! is_local $b || symlink $llvm/bin/$b $BIN/$b
+  done
+}
+
+# Release binaries need gcc 12+ libstdc++ (GLIBCXX_3.4.30, e.g. not RHEL 9): saves a 2GB download.
+llvm_prebuilt_ok() {
+  local so=$(ldconfig -p 2>/dev/null | grep -E 'libstdc\+\+\.so\.6 .*(x86-64|AArch64)' | sed 's/.*=> //' | head -1)
+  [ -z "$so" ] || grep -qa GLIBCXX_3.4.30 "$so"
 }
 
 _setup_cpp_files() {
@@ -831,7 +877,7 @@ main() {
   options+=('')
   options+=('js:        node + LSPs, prettierd')
   options+=('py:        python + LSP')
-  options+=('cpp:       llvm/clang, ccls')
+  options+=('cpp:       cmake, ninja, llvm/clang')
   options+=('ex:        elixir, erlang, elixir-ls')
   options+=('lua:       lua-format')
   options+=('sh:        beautysh formatter')

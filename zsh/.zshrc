@@ -53,6 +53,10 @@ export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
 # for GO
 export PATH="$PATH:$HOME/go/bin"
 
+# cmake: build with ninja, write compile_commands.json for clangd
+(( $+commands[ninja] )) && export CMAKE_GENERATOR=Ninja
+export CMAKE_EXPORT_COMPILE_COMMANDS=ON
+
 # for tmuxp
 export DISABLE_AUTO_TITLE='true'
 
