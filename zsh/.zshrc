@@ -28,6 +28,24 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 plugins=(asdf docker git)
 (( $+commands[direnv] )) && plugins+=(direnv)
 
+# oh-my-zsh skips completions from group/other-writable dirs ("Insecure completion-dependent
+# directories"). On shared hosts (umask 002, setgid group dirs) installs and omz updates come out
+# group-writable, so fix our own dirs before omz audits them. Audit the fpath omz is about to build,
+# and drop the compdump written while they were skipped: it has no completions and omz won't redo it.
+() {
+  autoload -Uz compaudit
+  local custom=${ZSH_CUSTOM:-$ZSH/custom}
+  # same dirs oh-my-zsh.sh adds to fpath (no comments inside $(...): it is parsed without interactive_comments)
+  local -a insecure=(${(f)"$(
+    fpath+=(${ZSH_CACHE_DIR:-$ZSH/cache}/completions $ZSH/{functions,completions}
+            $custom/{functions,completions} {$ZSH,$custom}/plugins/${^plugins})
+    compaudit 2>/dev/null)"})
+  insecure=(${^insecure}(NU))  # only ones we own; chmod can't fix the rest
+  (( $#insecure )) || return
+  chmod g-w,o-w -- $insecure
+  rm -f -- ${ZDOTDIR:-$HOME}/.zcompdump*(N)
+}
+
 source $ZSH/oh-my-zsh.sh
 
 # aliases
