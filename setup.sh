@@ -181,16 +181,19 @@ install_zsh() {
   echo "zsh: $zsh_path ($($zsh_path --version))"
 
   echo '-Set zsh as default shell-'
+  local rc
   if [ "$(basename "${SHELL:-}")" = zsh ]; then
     echo 'Already the default shell'
   elif grep -qxF "$zsh_path" /etc/shells 2>/dev/null && chsh -s "$zsh_path"; then
     echo "Default shell set to $zsh_path"
-  elif grep -qE '^[[:space:]]*(exec[[:space:]]+)?[^[:space:]#]*zsh([[:space:]]|$)|exec[[:space:]]+"?[^[:space:]#"]*zsh' ~/.bash_profile 2>/dev/null; then
-    echo '~/.bash_profile already starts zsh'
+  elif rc=$(grep -lE '^[[:space:]]*(exec[[:space:]]+)?[^[:space:]#]*zsh([[:space:]]|$)|exec[[:space:]]+"?[^[:space:]#"]*zsh|ZSH_FROM_BASH' ~/.bashrc ~/.bash_profile 2>/dev/null); then
+    echo "$(echo $rc) already starts zsh"
   else
-    # chsh needs zsh in /etc/shells (root), so switch to zsh from interactive bash logins instead
-    add_line ~/.bash_profile "[[ \$- == *i* ]] && [ -x \"$zsh_path\" ] && exec \"$zsh_path\" -l"
-    echo "chsh unavailable, ~/.bash_profile now starts $zsh_path"
+    # chsh needs zsh in /etc/shells (root). Instead interactive bash swaps to zsh at its first prompt,
+    # after all bash startup files ran. 'bash' from zsh stays bash (ZSH_FROM_BASH is inherited).
+    add_line ~/.bashrc '# dotfiles: switch to zsh (chsh needs root)'
+    add_line ~/.bashrc "[[ \$- == *i* && -z \$ZSH_FROM_BASH && -x \"$zsh_path\" ]] && PROMPT_COMMAND=\"ZSH_FROM_BASH=1 exec \\\"$zsh_path\\\" \$(shopt -q login_shell && echo -l)\""
+    echo "chsh unavailable, ~/.bashrc now switches interactive bash to $zsh_path"
   fi
 
   echo '-Install oh-my-zsh-'
